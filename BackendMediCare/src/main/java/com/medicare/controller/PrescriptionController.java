@@ -1,0 +1,80 @@
+package com.medicare.controller;
+
+import java.util.List;
+
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.medicare.dto.AddPrescriptionRequest;
+import com.medicare.dto.ApiResponse;
+import com.medicare.dto.PrescriptionDetailDto;
+import com.medicare.entity.Prescription;
+import com.medicare.service.PrescriptionService;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
+/**
+ * PrescriptionController
+ *
+ * - Only assigned doctor may add a prescription for an appointment.
+ * - Once created cannot be edited.
+ * - Patients, doctors, admins can fetch prescriptions (service methods available).
+ */
+@RestController
+@RequestMapping("/api/prescriptions")
+@RequiredArgsConstructor
+public class PrescriptionController {
+
+    private final PrescriptionService prescriptionService;
+
+    @PostMapping("/appointment/{appointmentId}")
+    public ResponseEntity<ApiResponse<Prescription>> addPrescription(@PathVariable Long appointmentId,
+                                                        @Valid @RequestBody AddPrescriptionRequest req,
+                                                        Authentication authentication) {
+        Long doctorUserId = (Long) authentication.getPrincipal();
+        Prescription saved = prescriptionService.addPrescription(appointmentId, doctorUserId, req);
+        return ResponseEntity.status(201).body(new ApiResponse<>(true, "Prescriptoin added successfully.", saved));
+    }
+
+    @GetMapping("/doctor")
+    public ResponseEntity<List<Prescription>> byDoctor(Authentication authentication) {
+        Long doctorUserId = (Long) authentication.getPrincipal();
+        return ResponseEntity.ok(prescriptionService.findByDoctorUserId(doctorUserId));
+    }
+
+    @GetMapping("/patient")
+    public ResponseEntity<List<Prescription>> byPatient(Authentication authentication) {
+        Long patientUserId = (Long) authentication.getPrincipal();
+        return ResponseEntity.ok(prescriptionService.findByPatientUserId(patientUserId));
+    }
+    
+    @GetMapping("/prescriptions/{id}")
+    public ResponseEntity<PrescriptionDetailDto> getPrescription(@PathVariable Long id) {
+        PrescriptionDetailDto dto = prescriptionService.getPrescriptionDetails(id);
+        return ResponseEntity.ok(dto);
+    }
+    
+    @GetMapping("/{id}/download")
+    public ResponseEntity<byte[]> downloadPrescriptionPdf(@PathVariable Long id) {
+        byte[] pdfBytes = prescriptionService.getPrescriptionPdf(id);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.builder("attachment")
+                .filename("prescription_" + id + ".pdf").build());
+
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+    }
+
+}
