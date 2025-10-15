@@ -12,6 +12,6 @@ import com.medicare.entity.Payment;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long>{
 	Optional<Payment> findByAppointment(Appointment appointment);
-    List<Payment> findByPatientUserUserId(Long patientId);
+    List<Payment> findByAppointmentPatientUserUserId(Long patientId);
     List<Payment> findByStatus(Payment.Status status);
 }

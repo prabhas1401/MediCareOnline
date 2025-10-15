@@ -66,7 +66,7 @@ public class PaymentController {
     @GetMapping("/patient")
     public ResponseEntity<List<Payment>> listByPatient(Authentication authentication) {
         Long patientUserId = (Long) authentication.getPrincipal();
-        return ResponseEntity.ok(paymentService.getPaymentsByPatientUserId(patientUserId));
+        return ResponseEntity.ok(paymentService.getPaymentsByAppointmentPatientUserId(patientUserId));
     }
 
 }

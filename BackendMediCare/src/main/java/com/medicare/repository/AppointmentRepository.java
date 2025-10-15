@@ -17,5 +17,5 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>{
     List<Appointment> findByPatientUserUserId(Long userId);
     List<Appointment> findByStatus(Appointment.AppointmentStatus status);
     boolean existsByPatientAndOriginalAppointmentAndIsReconsultTrue(Patient patient, Appointment appointment);
-    Optional<Appointment> findByIdAndLockedByIsNull(Long id);
-}
+    Optional<Appointment> findByAppointmentIdAndLockedByIsNull(Long id);
+}	

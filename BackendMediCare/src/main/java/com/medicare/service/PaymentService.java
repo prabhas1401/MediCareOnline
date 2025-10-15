@@ -54,8 +54,8 @@ public class PaymentService {
         return paymentRepository.save(p);
     }
 
-    public List<Payment> getPaymentsByPatientUserId(Long patientUserId) {
-        return paymentRepository.findByPatientUserUserId(patientUserId);
+    public List<Payment> getPaymentsByAppointmentPatientUserId(Long patientUserId) {
+        return paymentRepository.findByAppointmentPatientUserUserId(patientUserId);
     }
 
     public List<Payment> getPaymentsByStatus(Payment.Status status) {
