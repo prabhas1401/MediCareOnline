@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.medicare.BackendMediCareApplication;
 import com.medicare.dto.ApiResponse;
 import com.medicare.dto.CancelRequest;
 import com.medicare.dto.CreateAppointmentRequest;
@@ -39,9 +38,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AppointmentController {
 
-    private final BackendMediCareApplication backendMediCareApplication;
-
-    
     private final AppointmentService appointmentService;
     private final RazorpayService razorpayService;
     private final PaymentService paymentService;

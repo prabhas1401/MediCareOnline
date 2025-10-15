@@ -30,7 +30,6 @@ import com.medicare.repository.AdminRepository;
 import com.medicare.service.AdminService;
 import com.medicare.service.DoctorService;
 import com.medicare.service.PatientService;
-import com.medicare.service.UserService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +46,6 @@ import lombok.RequiredArgsConstructor;
 public class AdminController {
 
     private final AdminService adminService;
-    private final UserService userService;
     private final DoctorService doctorService;
     private final PatientService patientService;
     private final AdminRepository adminRepository;

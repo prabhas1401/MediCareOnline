@@ -152,7 +152,7 @@ public class AuthService {
                 Doctor.Specialization spec = Doctor.Specialization.valueOf(req.getSpecialization());
                 doctor.setSpecialization(spec);
             } catch (IllegalArgumentException ex) {
-                // ignore invalid specialization here; controller should validate earlier
+            	throw new IllegalArgumentException("Invalid specialization value: " + req.getSpecialization(), ex);
             }
         }
         doctor.setQualification(req.getQualification());

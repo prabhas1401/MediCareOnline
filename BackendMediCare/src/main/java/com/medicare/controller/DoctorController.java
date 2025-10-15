@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.medicare.BackendMediCareApplication;
 import com.medicare.dto.AddLeaveRequest;
 import com.medicare.dto.ApiResponse;
 import com.medicare.dto.DoctorProfileUpdateRequest;
@@ -38,8 +37,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/doctor")
 @RequiredArgsConstructor
 public class DoctorController {
-
-    private final BackendMediCareApplication backendMediCareApplication;
 
     private final DoctorService doctorService;
     private final AppointmentService appointmentService;

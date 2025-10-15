@@ -132,8 +132,8 @@ public class AppointmentService {
 				    appt.getScheduledDateTime(),
 				    30 // Duration in minutes
 				);
+			appt.setMeetingLink(meetLink);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 		    throw new ConflictException("Could not generate Google Meet link: " + e.getMessage());
 		}
         // release lock after scheduling

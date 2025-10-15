@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import com.medicare.entity.User;
 import com.medicare.exception.ConflictException;
 import com.medicare.exception.ResourceNotFoundException;
-import com.medicare.repository.AdminRepository;
 import com.medicare.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
@@ -26,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 

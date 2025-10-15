@@ -19,8 +19,6 @@ import com.medicare.dto.RegisterRequest;
 import com.medicare.dto.RegisterResponse;
 import com.medicare.dto.ResetPasswordRequest;
 import com.medicare.service.AuthService;
-import com.medicare.service.TokenService;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -43,7 +41,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
     private final AuthService authService;
-    private final TokenService tokenService;
+    
 
     // ----------------------
     // Registration & login

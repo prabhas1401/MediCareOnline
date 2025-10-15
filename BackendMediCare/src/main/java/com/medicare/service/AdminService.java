@@ -30,7 +30,6 @@ public class AdminService {
     private final UserRepository userRepository;
     private final DoctorRepository doctorRepository;
     private final AppointmentRepository appointmentRepository;
-    private final PaymentRepository paymentRepository;
     private final EmailService emailService;
     private final LockService lockService;
     private final AvailabilityRepository availabilityRepository;
