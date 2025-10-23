@@ -12,4 +12,5 @@ import com.medicare.entity.Admin;
 public interface AdminRepository extends JpaRepository<Admin, Long>{
 	Optional<Admin> findByUserId(Long userId);
     List<Admin> findBySuperAdminTrue();
+    boolean existsByUserUserId(Long userId);
 }

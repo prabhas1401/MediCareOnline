@@ -2,6 +2,8 @@ package com.medicare.entity;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -63,8 +65,10 @@ public class Doctor {
     private Integer experienceYears;
 
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Appointment> appointments;
 
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Availability> availability;
 }

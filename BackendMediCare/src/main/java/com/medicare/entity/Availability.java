@@ -41,4 +41,11 @@ public class Availability {
 
     @Column(nullable = false)
     private boolean booked = false; // slot booked or free
+    
+    @Column(nullable = false)
+    private boolean blocked = false;
+
+    // optional reason for blocking
+    @Column(length = 255)
+    private String reason;
 }

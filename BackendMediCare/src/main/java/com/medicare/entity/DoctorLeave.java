@@ -2,6 +2,8 @@ package com.medicare.entity;
 
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -27,6 +29,7 @@ public class DoctorLeave {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "doctor_id")
+    @JsonIgnore
     private Doctor doctor;
 
     @Column(nullable = false)

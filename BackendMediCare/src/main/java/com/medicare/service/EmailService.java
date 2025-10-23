@@ -101,8 +101,7 @@ public class EmailService {
         String subject = "Appointment Cancelled";
         String html = "<p>Hi " + escape(name) + ",</p>"
                 + "<p>Your appointment scheduled for " + (scheduledAt != null ? DATE_TIME_FMT.format(scheduledAt) : "N/A") + " has been cancelled.</p>"
-                + (reason != null ? "<p>Reason: " + escape(reason) + "</p>" : "")
-                +"A refund will be done in 3 working days.";
+                + (reason != null ? "<p>Reason: " + escape(reason) + "</p>" : "");
         sendHtmlEmail(to, subject, html);
     }
 

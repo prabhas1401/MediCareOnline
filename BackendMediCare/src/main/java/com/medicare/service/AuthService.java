@@ -166,56 +166,6 @@ public class AuthService {
                 "Doctor registered. Verify email. Admin must approve account before scheduling.");
     }
 
-    /**
-     * Create admin user (only callable by an existing super-admin)
-     * - performedByAdminUserId: id of the admin performing creation (must be super-admin)
-     */
-    @Transactional
-    public RegisterResponse registerAdmin(AdminRegistrationRequest req, Long performedByAdminUserId) {
-        // validate performedBy admin exists and is superAdmin
-        Admin creator = adminRepository.findByUserId(performedByAdminUserId)
-                .orElseThrow(() -> new IllegalArgumentException("Creator admin not found"));
-        if (!creator.isSuperAdmin()) {
-            throw new IllegalArgumentException("Only super-admin may create new admins");
-        }
-
-        // password checks
-        if (req.getRawPassword() == null || req.getRawPassword().isBlank()) {
-            throw new IllegalArgumentException("Password cannot be empty");
-        }
-
-
-        // uniqueness checks
-        if (userRepository.existsByEmailId(req.getEmail())) {
-            throw new IllegalArgumentException("Email already in use");
-        }
-        if (userRepository.existsByPhoneNumber(req.getPhoneNumber())) {
-            throw new IllegalArgumentException("Phone number already in use");
-        }
-
-        // create user
-        User user = new User();
-        user.setFullName(req.getFullName());
-        user.setEmailId(req.getEmail());
-        user.setPhoneNumber(req.getPhoneNumber());
-        user.setPasswordHash(passwordEncoder.encode(req.getRawPassword()));
-        user.setRole(User.Role.ADMIN);
-        user.setStatus(User.Status.ACTIVE); // Admins created by super-admin are active immediately
-
-        User saved = userRepository.save(user);
-
-        // create Admin record and mark superAdmin flag as requested
-        Admin admin = new Admin();
-        admin.setUser(saved);
-        admin.setSuperAdmin(req.isSuperAdmin());
-        adminRepository.save(admin);
-
-        // no verification email necessary for admin by story, but you might still inform them
-        emailService.sendVerificationEmail(saved.getEmailId(), UUID.randomUUID().toString()); // optional: can be removed
-
-        return new RegisterResponse(saved.getEmailId(), saved.getStatus().name(),
-                "Admin created successfully.");
-    }
 
     // -----------------------
     // Login / Auth

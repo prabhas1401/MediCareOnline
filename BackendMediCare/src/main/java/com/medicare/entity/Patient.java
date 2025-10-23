@@ -3,6 +3,8 @@ package com.medicare.entity;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -45,6 +47,7 @@ public class Patient {
     private LocalDate dateOfBirth;
 
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Appointment> appointments;
 
 }

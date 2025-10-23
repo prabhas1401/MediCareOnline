@@ -1,6 +1,7 @@
 package com.medicare.repository;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,7 +11,9 @@ import com.medicare.entity.Availability;
 
 @Repository
 public interface AvailabilityRepository extends JpaRepository<Availability, Long>{
-	List<Availability> findByDoctorUserUserIdAndDate(Long doctorId, LocalDate date);
-    List<Availability> findByDoctorUserUserIdAndBookedFalse(Long doctorId);
-    boolean existsByDoctorUserUserIdAndDateAndStartTimeAndBookedFalse(Long doctorId, LocalDate date, java.time.LocalTime startTime);
+   
+    //new
+    List<Availability> findByDoctorUserUserIdAndBlockedTrueAndDate(Long doctorId, LocalDate date);
+    List<Availability> findByDoctorUserUserIdAndBookedTrueAndDate(Long doctorId, LocalDate date);
+    boolean existsByDoctorUserUserIdAndDateAndStartTimeAndBlockedTrue(Long doctorId, LocalDate date, LocalTime startTime);
 }

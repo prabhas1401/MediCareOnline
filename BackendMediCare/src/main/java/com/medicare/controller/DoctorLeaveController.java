@@ -2,6 +2,8 @@ package com.medicare.controller;
 
 import java.util.List;
 
+import org.springframework.security.core.Authentication;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,8 +27,11 @@ public class DoctorLeaveController {
 
     private final DoctorLeaveService doctorLeaveService;
 
-    @GetMapping("/doctor/{doctorUserId}")
-    public ResponseEntity<List<DoctorLeave>> getLeaves(@PathVariable Long doctorUserId) {
-        return ResponseEntity.ok(doctorLeaveService.getLeavesForDoctor(doctorUserId));
+    @GetMapping("/doctor/{doctorUserId}")			//Done
+    public ResponseEntity<List<DoctorLeave>> getLeaves(@PathVariable Long doctorUserId, Authentication authentication) {
+    	
+    	Long actingUserId = (Long) authentication.getPrincipal();
+    	
+        return ResponseEntity.ok(doctorLeaveService.getLeavesForDoctor(doctorUserId, actingUserId));
     }
 }

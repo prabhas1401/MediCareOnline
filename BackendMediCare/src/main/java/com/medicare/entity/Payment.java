@@ -33,7 +33,7 @@ public class Payment {
     }
 
     public enum Status {
-        SUCCESS, PENDING, FAILED
+        SUCCESS, PENDING, FAILED, REFUND_INITIATED
     }
 
     @Id

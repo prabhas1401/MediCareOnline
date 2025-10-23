@@ -7,6 +7,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -35,7 +37,7 @@ import lombok.NoArgsConstructor;
 public class Appointment {
 
     public enum AppointmentStatus {
-        PENDING, CONFIRMED, CANCELLED, COMPLETED, RECONSULT
+        PENDING, CONFIRMED, CANCELLED, COMPLETED
     }
     
     public enum Symptom {
@@ -83,12 +85,13 @@ public class Appointment {
 
     @CreatedDate
     @Column(updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     @LastModifiedDate
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private LocalDateTime updatedAt;
 
     @OneToOne(mappedBy = "appointment", cascade = CascadeType.ALL)
+    @JsonIgnore
     private Prescription prescription;
 
     private String meetingLink;
@@ -104,6 +107,8 @@ public class Appointment {
     
     private Long lockedBy;
     private LocalDateTime lockExpiry;
+    
+    private boolean reAssigned = false;
     
 	public void setIsReconsult(boolean b) {
 		this.isReconsult=b;

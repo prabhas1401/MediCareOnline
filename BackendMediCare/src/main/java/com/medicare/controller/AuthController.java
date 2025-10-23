@@ -2,7 +2,6 @@ package com.medicare.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -10,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.medicare.dto.AdminRegistrationRequest;
 import com.medicare.dto.AuthResponse;
 import com.medicare.dto.EmailRequest;
 import com.medicare.dto.LoginRequest;
@@ -47,31 +45,19 @@ public class AuthController {
     // Registration & login
     // ----------------------
 
-    @PostMapping("/register/patient")
+    @PostMapping("/register/patient")			//Done
     public ResponseEntity<RegisterResponse> registerPatient(@Valid @RequestBody RegisterPatientRequest req) {
         RegisterResponse res = authService.registerPatient(req);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
-    @PostMapping("/register/doctor")
+    @PostMapping("/register/doctor")			//Done
     public ResponseEntity<RegisterResponse> registerDoctor(@Valid @RequestBody RegisterRequest req) {
         RegisterResponse res = authService.registerDoctor(req);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
-    // Create admin (only active admins; super-admin check enforced in service if required)
-    @PostMapping("/register/admin")
-    public ResponseEntity<RegisterResponse> registerAdmin(
-            @Valid @RequestBody AdminRegistrationRequest req,
-            Authentication authentication
-    ) {
-        // controller extracts authenticated userId (principal is userId set by JwtAuthFilter)
-        Long actingAdminUserId = (Long) authentication.getPrincipal();
-        RegisterResponse res = authService.registerAdmin(req, actingAdminUserId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(res);
-    }
-
-    @PostMapping("/login")
+    @PostMapping("/login")						//Done
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req) {
         AuthResponse res = authService.login(req);
         return ResponseEntity.ok(res);
@@ -86,7 +72,7 @@ public class AuthController {
      * - This is a public GET endpoint because the token reaches here via email link.
      * - Frontend will call this endpoint (or backend can simply render html and redirect).
      */
-    @GetMapping("/verify")
+    @GetMapping("/verify")			//Done
     public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
         authService.verifyEmail(token);
         return ResponseEntity.ok("Email verified successfully. You may now log in.");
@@ -96,7 +82,7 @@ public class AuthController {
      * Forgot password: UI posts email here. Backend sends password-reset email with token.
      * Public endpoint.
      */
-    @PostMapping("/forgot-password")
+    @PostMapping("/forgot-password")		//Done
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody EmailRequest emailRequest) {
         authService.forgotPassword(emailRequest.getEmail());
         return ResponseEntity.ok("Password reset link has been sent to the provided email (if it exists).");
@@ -107,7 +93,7 @@ public class AuthController {
      * - Accepts token + newPassword (frontend ensures confirm-password matched).
      * - Public endpoint because the token is the auth here.
      */
-    @PostMapping("/reset-password")
+    @PostMapping("/reset-password")			//Done
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
         authService.resetPassword(req.getToken(), req.getNewPassword());
         return ResponseEntity.ok("Password reset successful. You can now log in with your new password.");

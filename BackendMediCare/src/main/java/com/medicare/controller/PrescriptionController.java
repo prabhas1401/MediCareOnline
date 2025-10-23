@@ -18,7 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.medicare.dto.AddPrescriptionRequest;
 import com.medicare.dto.ApiResponse;
 import com.medicare.dto.PrescriptionDetailDto;
+import com.medicare.dto.PrescriptionResponseDTO;
 import com.medicare.entity.Prescription;
+import com.medicare.mapper.PrescriptionMapper;
 import com.medicare.service.PrescriptionService;
 
 import jakarta.validation.Valid;
@@ -38,34 +40,32 @@ public class PrescriptionController {
 
     private final PrescriptionService prescriptionService;
 
-    @PostMapping("/appointment/{appointmentId}")
-    public ResponseEntity<ApiResponse<Prescription>> addPrescription(@PathVariable Long appointmentId,
+    @PostMapping("/appointment/{appointmentId}")			//Done	
+    public ResponseEntity<ApiResponse<PrescriptionResponseDTO>> addPrescription(@PathVariable Long appointmentId,
                                                         @Valid @RequestBody AddPrescriptionRequest req,
                                                         Authentication authentication) {
         Long doctorUserId = (Long) authentication.getPrincipal();
         Prescription saved = prescriptionService.addPrescription(appointmentId, doctorUserId, req);
-        return ResponseEntity.status(201).body(new ApiResponse<>(true, "Prescriptoin added successfully.", saved));
+        return ResponseEntity.status(201).body(new ApiResponse<>(true, "Prescriptoin added successfully.", PrescriptionMapper.toDto(saved)));
     }
 
-    @GetMapping("/doctor")
-    public ResponseEntity<List<Prescription>> byDoctor(Authentication authentication) {
+    @GetMapping("/by-current-user")					//Done
+    public ResponseEntity<List<PrescriptionResponseDTO>> byUser(Authentication authentication) {
         Long doctorUserId = (Long) authentication.getPrincipal();
-        return ResponseEntity.ok(prescriptionService.findByDoctorUserId(doctorUserId));
-    }
-
-    @GetMapping("/patient")
-    public ResponseEntity<List<Prescription>> byPatient(Authentication authentication) {
-        Long patientUserId = (Long) authentication.getPrincipal();
-        return ResponseEntity.ok(prescriptionService.findByPatientUserId(patientUserId));
+        List<PrescriptionResponseDTO> prescriptions  = prescriptionService.findByUserId(doctorUserId)
+        		.stream()
+                .map(PrescriptionMapper::toDto)
+        		.toList();
+        return ResponseEntity.ok(prescriptions);
     }
     
-    @GetMapping("/prescriptions/{id}")
+    @GetMapping("/{id}")				//Done		
     public ResponseEntity<PrescriptionDetailDto> getPrescription(@PathVariable Long id) {
         PrescriptionDetailDto dto = prescriptionService.getPrescriptionDetails(id);
         return ResponseEntity.ok(dto);
     }
     
-    @GetMapping("/{id}/download")
+    @GetMapping("/{id}/download")				//Done
     public ResponseEntity<byte[]> downloadPrescriptionPdf(@PathVariable Long id) {
         byte[] pdfBytes = prescriptionService.getPrescriptionPdf(id);
 

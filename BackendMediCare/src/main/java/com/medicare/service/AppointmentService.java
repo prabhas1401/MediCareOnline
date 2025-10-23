@@ -1,6 +1,8 @@
 package com.medicare.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -8,19 +10,23 @@ import org.springframework.stereotype.Service;
 import com.medicare.dto.CancelRequest;
 import com.medicare.dto.CreateAppointmentRequest;
 import com.medicare.entity.Appointment;
-import com.medicare.entity.Availability;
+import com.medicare.entity.CancelledAppointment;
 import com.medicare.entity.Doctor;
 import com.medicare.entity.Patient;
 import com.medicare.entity.Payment;
+import com.medicare.entity.User;
 import com.medicare.exception.ConflictException;
 import com.medicare.exception.ForbiddenException;
 import com.medicare.exception.ResourceNotFoundException;
+import com.medicare.repository.AdminRepository;
 import com.medicare.repository.AppointmentRepository;
 import com.medicare.repository.AvailabilityRepository;
+import com.medicare.repository.CancelledAppointmentRepository;
 import com.medicare.repository.DoctorLeaveRepository;
 import com.medicare.repository.DoctorRepository;
 import com.medicare.repository.PatientRepository;
 import com.medicare.repository.PaymentRepository;
+import com.medicare.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +43,10 @@ public class AppointmentService {
     private final PaymentRepository paymentRepository;
     private final LockService lockService;
     private final EmailService emailService;
-    private final GoogleMeetService googleMeetService;
-    
+	private final ZoomService zoomService;
+	private final AdminRepository adminRepository;
+	private final CancelledAppointmentRepository cancelledAppointmentRepository;
+	private final UserRepository userRepository;
     
 
     /**
@@ -95,47 +103,61 @@ public class AppointmentService {
      * Schedule PENDING appointment to a doctor by using availability slot.
      */
     @Transactional
-    public Appointment scheduleAppointment(Long appointmentId, Long actingUserId, Long doctorUserId, Long availabilityId) {
+    public Appointment scheduleAppointment(Long appointmentId, Long actingUserId, Long doctorUserId, LocalDateTime requestedDateTime) {
         Appointment appt = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+        
+        
 
         // require lock
-        if (!actingUserId.equals(appt.getLockedBy())) throw new ForbiddenException("Lock required to schedule");
+        if (!lockService.isLockedAndActive(appt)) {
+            throw new ConflictException("Appointment is not locked. Please acquire lock before scheduling.");
+        }
 
+        if (!appt.getLockedBy().equals(actingUserId)) {
+            throw new ConflictException("Appointment currently locked by another user.");
+        }
         if (appt.getStatus() != Appointment.AppointmentStatus.PENDING) {
             throw new ConflictException("Only pending appointments can be scheduled");
         }
 
         Doctor doctor = doctorRepository.findByUserId(doctorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
-        Availability slot = availabilityRepository.findById(availabilityId)
-                .orElseThrow(() -> new ResourceNotFoundException("Slot not found"));
-
-        if (!slot.getDoctor().getUser().getUserId().equals(doctorUserId)) throw new ConflictException("Slot not for selected doctor");
-        if (slot.isBooked()) throw new ConflictException("Slot already booked");
-        if (doctorLeaveRepository.existsByDoctorUserUserIdAndLeaveDate(doctorUserId, slot.getDate())) {
+        
+        if (!requestedDateTime.isAfter(LocalDateTime.now())) {
+            throw new ConflictException("Requested slot must be in the future");
+        }
+        
+        validateSlotTime(requestedDateTime);
+        
+        if (doctorLeaveRepository.existsByDoctorUserUserIdAndLeaveDate(doctorUserId, requestedDateTime.toLocalDate())) {
             throw new ConflictException("Doctor is on leave that date");
         }
+        
+        if (appointmentRepository.existsByDoctorUserUserIdAndScheduledDateTime(doctorUserId, requestedDateTime)) {
+            throw new ConflictException("Slot already booked");
+        }
 
-        // book slot, set appointment details
-        slot.setBooked(true);
-        availabilityRepository.save(slot);
+
+        boolean blocked = availabilityRepository.existsByDoctorUserUserIdAndDateAndStartTimeAndBlockedTrue(
+                doctorUserId, requestedDateTime.toLocalDate(), requestedDateTime.toLocalTime());
+        if (blocked) throw new ConflictException("Slot marked unavailable by doctor");
 
         appt.setDoctor(doctor);
-        appt.setScheduledDateTime(LocalDateTime.of(slot.getDate(), slot.getStartTime()));
+        appt.setScheduledDateTime(requestedDateTime);
         appt.setStatus(Appointment.AppointmentStatus.CONFIRMED);
-        String meetLink;
-		try {
-			meetLink = googleMeetService.createGoogleMeetEvent(
-				    "Consultation with Dr. " + appt.getDoctor().getUser().getFullName(),
-				    "Appointment via MediCare HMS",
-				    appt.getScheduledDateTime(),
-				    30 // Duration in minutes
-				);
-			appt.setMeetingLink(meetLink);
-		} catch (Exception e) {
-		    throw new ConflictException("Could not generate Google Meet link: " + e.getMessage());
-		}
+
+        try {
+            String meetingLink = zoomService.createZoomMeeting(
+                "Consultation with Dr. " + appt.getDoctor().getUser().getFullName(),
+                appt.getScheduledDateTime(),
+                20
+            );
+            appt.setMeetingLink(meetingLink);
+        } catch (Exception e) {
+            throw new ConflictException("Could not generate Zoom link: " + e.getMessage());
+        }
+
         // release lock after scheduling
         lockService.releaseLock(appt);
         Appointment saved = appointmentRepository.save(appt);
@@ -157,18 +179,36 @@ public class AppointmentService {
 
         return saved;
     }
+    
+    /**
+     * Ensure requested slot aligns with 20-min slot boundaries and not during lunch.
+     */
+    public void validateSlotTime(LocalDateTime dt) {
+        LocalTime t = dt.toLocalTime();
+        LocalTime start = LocalTime.of(9, 0);
+        LocalTime end = LocalTime.of(17, 0);
+        if (dt.getMinute() % 20 != 0) throw new ConflictException("Slot must align to 20-minute boundary (e.g., 09:00, 09:20)");
+        if (t.isBefore(start) || t.isAfter(end.minusMinutes(20))) throw new ConflictException("Slot outside working hours");
+        if (!t.isBefore(LocalTime.of(12, 0)) && t.isBefore(LocalTime.of(13, 0))) throw new ConflictException("Slot during lunch break");
+    }
 
     /**
      * Reschedule appointment (1-day-before restriction).
      * byAdmin allows admin override.
      */
     @Transactional
-    public Appointment rescheduleAppointment(Long appointmentId, Long actingUserId, Long newAvailabilityId, boolean byAdmin) {
-        Appointment appt = appointmentRepository.findById(appointmentId)
+    public Appointment rescheduleAppointment(Long appointmentId, Long actingUserId, LocalDateTime newRequestedDateTime, boolean byAdmin) {
+    	Appointment appt = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
-        if (!actingUserId.equals(appt.getLockedBy())) throw new ForbiddenException("Lock required to reschedule");
+        if (!lockService.isLockedAndActive(appt)) {
+            throw new ConflictException("Appointment is not locked. Please acquire lock before rescheduling.");
+        }
 
+        if (!appt.getLockedBy().equals(actingUserId)) {
+            throw new ConflictException("Appointment currently locked by another user.");
+        }
+    	
         if (appt.getStatus() != Appointment.AppointmentStatus.CONFIRMED) {
             throw new ConflictException("Only confirmed appointments can be rescheduled");
         }
@@ -176,49 +216,56 @@ public class AppointmentService {
         if (!byAdmin && appt.getScheduledDateTime() != null && appt.getScheduledDateTime().isBefore(LocalDateTime.now().plusDays(1))) {
             throw new ConflictException("Cannot reschedule less than 1 day before appointment");
         }
-
-        // free previous slot if found
-        if (appt.getScheduledDateTime() != null && appt.getDoctor() != null) {
-            LocalDateTime prev = appt.getScheduledDateTime();
-            List<Availability> prevSlots = availabilityRepository.findByDoctorUserUserIdAndDate(appt.getDoctor().getUser().getUserId(), prev.toLocalDate());
-            for (Availability s : prevSlots) {
-                if (s.getStartTime().equals(prev.toLocalTime())) {
-                    s.setBooked(false);
-                    availabilityRepository.save(s);
-                    break;
-                }
-            }
+        
+        if (!newRequestedDateTime.isAfter(LocalDateTime.now())) {
+            throw new ConflictException("Requested slot must be in the future");
         }
 
-        Availability slot = availabilityRepository.findById(newAvailabilityId)
-                .orElseThrow(() -> new ResourceNotFoundException("New slot not found"));
-
-        if (slot.isBooked()) throw new ConflictException("New slot already booked");
-        if (doctorLeaveRepository.existsByDoctorUserUserIdAndLeaveDate(slot.getDoctor().getUser().getUserId(), slot.getDate())) {
+        
+        validateSlotTime(newRequestedDateTime);
+        
+        if (appt.getDoctor() == null) {
+            throw new ConflictException("Cannot reschedule appointment with no assigned doctor");
+        }
+        
+        
+        Long doctorUserId = appt.getDoctor().getUser().getUserId();
+        
+        // Doctor leave check
+        if (doctorLeaveRepository.existsByDoctorUserUserIdAndLeaveDate(doctorUserId, newRequestedDateTime.toLocalDate())) {
             throw new ConflictException("Doctor is on leave that date");
         }
-        slot.setBooked(true);
-        availabilityRepository.save(slot);
 
-        LocalDateTime old = appt.getScheduledDateTime();
-        appt.setScheduledDateTime(LocalDateTime.of(slot.getDate(), slot.getStartTime()));
+        // If another appointment already exists for that doctor at that datetime -> conflict
+        if (appointmentRepository.existsByDoctorUserUserIdAndScheduledDateTime(doctorUserId, newRequestedDateTime)) {
+            throw new ConflictException("Requested slot already booked");
+        }
         
-        // Generate new meeting link
-        String meetLink;
+        // If slot is BLOCKED by doctor (Availability.blocked = true) -> conflict
+        boolean isBlocked = availabilityRepository.existsByDoctorUserUserIdAndDateAndStartTimeAndBlockedTrue(
+                doctorUserId, newRequestedDateTime.toLocalDate(), newRequestedDateTime.toLocalTime());
+        if (isBlocked) {
+            throw new ConflictException("Requested slot is blocked/unavailable");
+        }
+        
+        LocalDateTime old = appt.getScheduledDateTime();        
+
+        appt.setScheduledDateTime(newRequestedDateTime);
+        
         try {
-            meetLink = googleMeetService.createGoogleMeetEvent(
+            String meetLink = zoomService.createZoomMeeting(
                 "Consultation with Dr. " + appt.getDoctor().getUser().getFullName(),
-                "Appointment via MediCare HMS (Rescheduled)",
-                LocalDateTime.of(slot.getDate(), slot.getStartTime()),
-                30 // Duration in minutes (or your preferred default)
+                newRequestedDateTime,
+                20
             );
             appt.setMeetingLink(meetLink);
         } catch (Exception e) {
-            throw new ConflictException("Could not generate Google Meet link while rescheduling: " + e.getMessage());
+            throw new ConflictException("Could not generate Zoom link while rescheduling: " + e.getMessage());
         }
+        
         lockService.releaseLock(appt);
         Appointment saved = appointmentRepository.save(appt);
-
+        
         // notify
         emailService.sendAppointmentRescheduledEmail(saved.getPatient().getUser().getEmailId(),
                 saved.getPatient().getUser().getFullName(), old, saved.getScheduledDateTime(), saved.getMeetingLink());
@@ -237,63 +284,162 @@ public class AppointmentService {
     public Appointment cancelAppointment(Long appointmentId, Long actingUserId, boolean byAdmin, CancelRequest req) {
         Appointment appt = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
-
-        if (lockService.isLockedAndActive(appt) && !appt.getLockedBy().equals(actingUserId)) {
-            throw new ConflictException("Another user is currently processing this appointment.");
+        
+        if (appt.isReconsult()) {
+            throw new ForbiddenException("Reconsult appointments cannot be cancelled.");
         }
 
-        if (!byAdmin && appt.getScheduledDateTime() != null && appt.getScheduledDateTime().isBefore(LocalDateTime.now().plusDays(1))) {
-            throw new ConflictException("Cannot cancel less than 1 day before appointment");
+        // Check lock
+        if (!lockService.isLockedAndActive(appt)) {
+            throw new ConflictException("Appointment is not locked. Please acquire lock before cancel.");
         }
 
-        appt.setStatus(Appointment.AppointmentStatus.CANCELLED);
+        if (!appt.getLockedBy().equals(actingUserId)) {
+            throw new ConflictException("Appointment currently locked by another user.");
+        }
+        
+        if(appt.isReAssigned()) {
+        	throw new ForbiddenException("Cannot cancel an appointment that already re-assigned.");
+        }
 
-        // free slot
-        if (appt.getScheduledDateTime() != null && appt.getDoctor() != null) {
-            LocalDateTime sched = appt.getScheduledDateTime();
-            List<Availability> slots = availabilityRepository.findByDoctorUserUserIdAndDate(appt.getDoctor().getUser().getUserId(), sched.toLocalDate());
-            for (Availability s : slots) {
-                if (s.getStartTime().equals(sched.toLocalTime())) {
-                    s.setBooked(false);
-                    availabilityRepository.save(s);
-                    break;
-                }
+        // Determine roles
+        boolean isDoctor = doctorRepository.existsByUserId(actingUserId);
+        boolean isAdmin = adminRepository.existsByUserUserId(actingUserId);
+        boolean isPatient = !isDoctor && !isAdmin;
+
+        LocalDate apptDate = appt.getScheduledDateTime() != null ? appt.getScheduledDateTime().toLocalDate() : null;
+        LocalDate today = LocalDate.now();
+        
+        // ---------- VALIDATE OWNERSHIP ----------
+        if (isPatient && !appt.getPatient().getUser().getUserId().equals(actingUserId)) {
+            throw new ForbiddenException("You are not authorized to cancel this appointment.");
+        }
+
+        if (isDoctor && !appt.getDoctor().getUser().getUserId().equals(actingUserId)) {
+            throw new ForbiddenException("You are not authorized to cancel this appointment.");
+        }
+
+        // ------------- PATIENT CANCELLATION -------------
+        if (isPatient) {
+            appt.setStatus(Appointment.AppointmentStatus.CANCELLED);
+            LocalDateTime scheduledAtBeforeCancel = appt.getScheduledDateTime();
+            appt.setScheduledDateTime(null);
+            appt.setMeetingLink(null);
+
+            // No refund
+            paymentRepository.findByAppointment(appt).ifPresent(p -> {
+                p.setStatus(Payment.Status.FAILED);
+                paymentRepository.save(p);
+            });
+
+            Appointment saved = appointmentRepository.save(appt);
+
+            // Notify both doctor & patient
+            if (saved.getDoctor() != null) {
+            	
+                emailService.sendAppointmentCancelledEmail(
+                		saved.getDoctor().getUser().getEmailId(),
+                		saved.getDoctor().getUser().getFullName(),
+                    scheduledAtBeforeCancel,
+                    "Appointment cancelled by patient. No refund as per policy."
+                );
+                appt.setDoctor(null);
+            }
+
+            emailService.sendAppointmentCancelledEmailToPatient(
+                saved.getPatient().getUser().getEmailId(),
+                saved.getPatient().getUser().getFullName(),
+                scheduledAtBeforeCancel,
+                "You have successfully cancelled your appointment. No refund as per policy."
+            );
+
+            return saved;
+        }
+
+        // ------------- DOCTOR CANCELLATION -------------
+        if (isDoctor) {
+            if (apptDate != null && apptDate.isAfter(today.plusDays(1))) {
+                appt.setStatus(Appointment.AppointmentStatus.CANCELLED);
+                
+                LocalDateTime scheduledAtBeforeCancel = appt.getScheduledDateTime();
+                appt.setScheduledDateTime(null);
+                appt.setMeetingLink(null);
+                
+                // No refund until admin confirms
+                paymentRepository.findByAppointment(appt).ifPresent(p -> {
+                    p.setStatus(Payment.Status.PENDING); // waiting for admin to finalize refund
+                    paymentRepository.save(p);
+                });
+
+                // Log this cancellation for admin reassign view
+                CancelledAppointment cancelled = new CancelledAppointment();
+                cancelled.setAppointment(appt);
+                cancelled.setCancelledByDoctor(appt.getDoctor());
+                cancelled.setReason(req.getReason());
+                cancelled.setCancelledAt(LocalDateTime.now());
+                cancelledAppointmentRepository.save(cancelled);
+                
+                String doctor = appt.getDoctor().getUser().getFullName(); 
+                appt.setDoctor(null);
+
+                Appointment saved = appointmentRepository.save(appt);
+
+                // Notify patient only
+                emailService.sendAppointmentCancelledEmailToPatient(
+                    saved.getPatient().getUser().getEmailId(),
+                    saved.getPatient().getUser().getFullName(),
+                    scheduledAtBeforeCancel,
+                    "Your doctor Dr. "+ doctor + " has cancelled the appointment. Our team will reassign a new doctor shortly."
+                );
+
+                return saved;
+            } else {
+                throw new ConflictException("Doctor can cancel only before 1 day of scheduled appointment.");
             }
         }
 
-        // mark payment as FAILED (placeholder for refund flow)
-        paymentRepository.findByAppointment(appt).ifPresent(p -> {
-            p.setStatus(Payment.Status.FAILED);
-            paymentRepository.save(p);
-        });
+        // ------------- ADMIN CANCELLATION -------------
+        if (isAdmin || byAdmin) {
+            appt.setStatus(Appointment.AppointmentStatus.CANCELLED);
+            
+            LocalDateTime scheduledAtBeforeCancel = appt.getScheduledDateTime();
+            appt.setScheduledDateTime(null);
+            appt.setMeetingLink(null);
+                        
+            // Refund initiated
+            paymentRepository.findByAppointment(appt).ifPresent(p -> {
+                p.setStatus(Payment.Status.REFUND_INITIATED);
+                paymentRepository.save(p);
+            });
 
-        if (appt.getLockedBy() != null) lockService.releaseLock(appt);
-        Appointment saved = appointmentRepository.save(appt);
 
-        // notify
-        emailService.sendAppointmentCancelledEmailToPatient(saved.getPatient().getUser().getEmailId(),
-                saved.getPatient().getUser().getFullName(), saved.getScheduledDateTime(), req.getReason());
-        if (saved.getDoctor() != null) {
-            emailService.sendAppointmentCancelledEmail(saved.getDoctor().getUser().getEmailId(),
-                    saved.getDoctor().getUser().getFullName(), saved.getScheduledDateTime(), req.getReason());
+            // Notify both doctor & patient
+            if (appt.getDoctor() != null) {
+            	
+                emailService.sendAppointmentCancelledEmail(
+                		appt.getDoctor().getUser().getEmailId(),
+                		appt.getDoctor().getUser().getFullName(),
+                    scheduledAtBeforeCancel,
+                    "Appointment cancelled by admin."
+                );
+                appt.setDoctor(null);
+            }
+            
+            Appointment saved = appointmentRepository.save(appt);
+
+            emailService.sendAppointmentCancelledEmailToPatient(
+                saved.getPatient().getUser().getEmailId(),
+                saved.getPatient().getUser().getFullName(),
+                scheduledAtBeforeCancel,
+                "Appointment cancelled by admin. Refund has been initiated."
+            );
+
+            return saved;
         }
 
-        return saved;
+        throw new ForbiddenException("Unauthorized cancellation request.");
     }
 
-    /**
-     * Mark appointment completed by assigned doctor
-     */
-    @Transactional
-    public Appointment markCompleted(Long appointmentId, Long doctorUserId) {
-        Appointment appt = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
-        if (appt.getDoctor() == null || !appt.getDoctor().getUser().getUserId().equals(doctorUserId)) {
-            throw new ForbiddenException("Only assigned doctor may mark complete");
-        }
-        appt.setStatus(Appointment.AppointmentStatus.COMPLETED);
-        return appointmentRepository.save(appt);
-    }
 
     /**
      * Create a reconsult request (free) — only within 10 days and one per original appointment.
@@ -342,46 +488,55 @@ public class AppointmentService {
      * Schedule reconsult (doctor confirms)
      */
     @Transactional
-    public Appointment scheduleReconsult(Long reconsultId, Long doctorUserId, Long availabilityId, Long actingUserId) {
+    public Appointment scheduleReconsult(Long reconsultId, Long doctorUserId, LocalDateTime requestedDateTime) {
         Appointment appt = appointmentRepository.findById(reconsultId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reconsult not found"));
 
-        if (!appt.isReconsult()) throw new ConflictException("Not a reconsult");
+        if (!appt.isReconsult()) throw new ConflictException("Not a reconsult appointment");
+        
         if (appt.getDoctor() == null || !appt.getDoctor().getUser().getUserId().equals(doctorUserId)) {
             throw new ForbiddenException("Only original doctor may confirm reconsult");
         }
-
-        // lock logic
-        if (lockService.isLockedAndActive(appt) && !appt.getLockedBy().equals(actingUserId)) {
-            throw new ConflictException("Another user is currently processing this appointment.");
+        
+        if (appt.getScheduledDateTime() != null || appt.getMeetingLink() != null) {
+            throw new ConflictException("Reconsult was already scheduled.");
         }
-        if (appt.getLockedBy() == null || lockService.isLockExpired(appt)) {
-            lockService.applyLock(appt, actingUserId);
+        
+        if (!requestedDateTime.isAfter(LocalDateTime.now())) {
+            throw new ConflictException("Requested slot must be in the future");
         }
-
-        Availability slot = availabilityRepository.findById(availabilityId)
-                .orElseThrow(() -> new ResourceNotFoundException("Slot not found"));
-        if (slot.isBooked()) throw new ConflictException("Slot already booked");
-        if (!slot.getDoctor().getUser().getUserId().equals(doctorUserId)) throw new ConflictException("Slot not for this doctor");
-
-        slot.setBooked(true);
-        availabilityRepository.save(slot);
-
-        appt.setScheduledDateTime(LocalDateTime.of(slot.getDate(), slot.getStartTime()));
+        
+        validateSlotTime(requestedDateTime);
+        
+        if (doctorLeaveRepository.existsByDoctorUserUserIdAndLeaveDate(doctorUserId, requestedDateTime.toLocalDate())) {
+            throw new ConflictException("Doctor is on leave that date");
+        }
+        
+        // Conflict: another appointment at that exact datetime for the same doctor
+        if (appointmentRepository.existsByDoctorUserUserIdAndScheduledDateTime(doctorUserId, requestedDateTime)) {
+            throw new ConflictException("Requested slot already booked");
+        }
+        
+        // Blocked slot check (doctor manually blocked via Availability.blocked = true)
+        boolean blocked = availabilityRepository.existsByDoctorUserUserIdAndDateAndStartTimeAndBlockedTrue(
+                doctorUserId, requestedDateTime.toLocalDate(), requestedDateTime.toLocalTime());
+        if (blocked) throw new ConflictException("Requested slot is blocked/unavailable");
+        
+        appt.setScheduledDateTime(requestedDateTime);
         appt.setStatus(Appointment.AppointmentStatus.CONFIRMED);
-        String meetLink;
+        
         try {
-            meetLink = googleMeetService.createGoogleMeetEvent(
+            String meetLink = zoomService.createZoomMeeting(
                 "Reconsultation with Dr. " + appt.getDoctor().getUser().getFullName(),
-                "Reconsult appointment via MediCare HMS",
                 appt.getScheduledDateTime(),
-                30 // Duration in minutes
+                20 // Duration in minutes
             );
             appt.setMeetingLink(meetLink);
         } catch (Exception e) {
-            throw new ConflictException("Could not generate Google Meet link for reconsult: " + e.getMessage());
+            throw new ConflictException("Could not generate Zoom link for reconsult: " + e.getMessage());
         }
-        lockService.releaseLock(appt);
+        
+        
         Appointment saved = appointmentRepository.save(appt);
 
         // notify both
@@ -394,11 +549,12 @@ public class AppointmentService {
     }
     
     @Transactional
-    public Appointment rescheduleReconsult(Long reconsultId, Long doctorUserId, Long newAvailabilityId) {
+    public Appointment rescheduleReconsult(Long reconsultId, Long doctorUserId, LocalDateTime newRequestedDateTime) {
         Appointment appt = appointmentRepository.findById(reconsultId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reconsult not found"));
 
-        if (!appt.isReconsult()) throw new ConflictException("Not a reconsult");
+        if (!appt.isReconsult()) throw new ConflictException("Not a reconsult appointment");
+        
         if (appt.getDoctor() == null || !appt.getDoctor().getUser().getUserId().equals(doctorUserId)) {
             throw new ForbiddenException("Only original doctor may reschedule reconsult");
         }
@@ -411,45 +567,42 @@ public class AppointmentService {
         if (appt.getScheduledDateTime() != null && appt.getScheduledDateTime().isBefore(LocalDateTime.now().plusDays(1))) {
             throw new ConflictException("Cannot reschedule less than 1 day before reconsult appointment");
         }
+        
+        if (!newRequestedDateTime.isAfter(LocalDateTime.now())) {
+            throw new ConflictException("Requested slot must be in the future");
+        }
+        
+        // Validate new requested time
+        validateSlotTime(newRequestedDateTime);
 
-        // free previous slot if found
-        if (appt.getScheduledDateTime() != null) {
-            LocalDateTime prev = appt.getScheduledDateTime();
-            List<Availability> prevSlots = availabilityRepository.findByDoctorUserUserIdAndDate(appt.getDoctor().getUser().getUserId(), prev.toLocalDate());
-            for (Availability s : prevSlots) {
-                if (s.getStartTime().equals(prev.toLocalTime())) {
-                    s.setBooked(false);
-                    availabilityRepository.save(s);
-                    break;
-                }
-            }
+        // Doctor leave check
+        if (doctorLeaveRepository.existsByDoctorUserUserIdAndLeaveDate(doctorUserId, newRequestedDateTime.toLocalDate())) {
+            throw new ConflictException("Doctor is on leave that date");
         }
 
-        Availability newSlot = availabilityRepository.findById(newAvailabilityId)
-                .orElseThrow(() -> new ResourceNotFoundException("New slot not found"));
-
-        if (newSlot.isBooked()) throw new ConflictException("New slot already booked");
-        if (!newSlot.getDoctor().getUser().getUserId().equals(doctorUserId))
-            throw new ConflictException("New slot not for this doctor");
-
-        newSlot.setBooked(true);
-        availabilityRepository.save(newSlot);
+        // Conflict with other appointments (same doctor)
+        if (appointmentRepository.existsByDoctorUserUserIdAndScheduledDateTime(doctorUserId, newRequestedDateTime)) {
+            throw new ConflictException("Requested slot already booked");
+        }
+        
+        // Blocked slot check
+        boolean blocked = availabilityRepository.existsByDoctorUserUserIdAndDateAndStartTimeAndBlockedTrue(
+                doctorUserId, newRequestedDateTime.toLocalDate(), newRequestedDateTime.toLocalTime());
+        if (blocked) throw new ConflictException("Requested slot is blocked/unavailable");
 
         LocalDateTime old = appt.getScheduledDateTime();
-        appt.setScheduledDateTime(LocalDateTime.of(newSlot.getDate(), newSlot.getStartTime()));
+        appt.setScheduledDateTime(newRequestedDateTime);
 
         // Generate new meeting link similar to scheduling and rescheduling other appointment types
-        String meetLink;
         try {
-            meetLink = googleMeetService.createGoogleMeetEvent(
+        	String meetLink = zoomService.createZoomMeeting(
                     "Reconsultation with Dr. " + appt.getDoctor().getUser().getFullName(),
-                    "Rescheduled Reconsult via MediCare HMS",
                     appt.getScheduledDateTime(),
-                    30
+                    20
             );
             appt.setMeetingLink(meetLink);
         } catch (Exception e) {
-            throw new ConflictException("Could not generate Google Meet link while rescheduling reconsult: " + e.getMessage());
+            throw new ConflictException("Could not generate Zoom link while rescheduling reconsult: " + e.getMessage());
         }
 
         Appointment saved = appointmentRepository.save(appt);
@@ -475,5 +628,25 @@ public class AppointmentService {
 
     public List<Appointment> findByPatientUserId(Long patientUserId) {
         return appointmentRepository.findByPatientUserUserId(patientUserId);
+    }
+    
+    public Appointment findByAppointmentId(Long appointmentId, Long actingUserId) {
+    	
+    	Appointment appt = appointmentRepository.findById(appointmentId)
+    			.orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + appointmentId));
+    	
+    	User user = userRepository.findById(actingUserId)
+    			.orElseThrow(() -> new ResourceNotFoundException("User not found."));
+    	
+    	if(user.getRole() == User.Role.PATIENT && appt.getPatient().getUser().getUserId() != actingUserId)
+    		throw new ForbiddenException("Appointment not belongs to you.");
+    	
+        return appt;
+    }
+    
+    public List<Appointment> findByDoctorReconsults(Long doctorUserId) {
+    	Doctor doctor = doctorRepository.findByUserUserId(doctorUserId)
+    			.orElseThrow(() -> new ResourceNotFoundException("Doctor not found."));
+        return appointmentRepository.findByDoctorUserUserIdAndIsReconsultTrue(doctor.getUserId());
     }
 }

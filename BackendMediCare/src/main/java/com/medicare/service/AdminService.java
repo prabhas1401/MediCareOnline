@@ -1,19 +1,31 @@
 package com.medicare.service;
 
-import com.medicare.dto.AdminRegistrationRequest;
-import com.medicare.entity.*;
-import com.medicare.repository.*;
-import com.medicare.exception.ConflictException;
-import com.medicare.exception.ForbiddenException;
-import com.medicare.exception.ResourceNotFoundException;
-
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import com.medicare.dto.AdminDTO;
+import com.medicare.dto.AdminRegistrationRequest;
+import com.medicare.entity.Admin;
+import com.medicare.entity.Appointment;
+import com.medicare.entity.CancelledAppointment;
+import com.medicare.entity.Doctor;
+import com.medicare.entity.User;
+import com.medicare.exception.ConflictException;
+import com.medicare.exception.ForbiddenException;
+import com.medicare.exception.ResourceNotFoundException;
+import com.medicare.repository.AdminRepository;
+import com.medicare.repository.AppointmentRepository;
+import com.medicare.repository.AvailabilityRepository;
+import com.medicare.repository.CancelledAppointmentRepository;
+import com.medicare.repository.DoctorLeaveRepository;
+import com.medicare.repository.DoctorRepository;
+import com.medicare.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * AdminService: admin features described in story.
@@ -34,7 +46,10 @@ public class AdminService {
     private final LockService lockService;
     private final AvailabilityRepository availabilityRepository;
     private final PasswordEncoder passwordEncoder;
-    private final GoogleMeetService googleMeetService;
+	private final DoctorLeaveRepository doctorLeaveRepository;
+	private final AppointmentService appointmentService;
+	private final ZoomService zoomService;
+	private final CancelledAppointmentRepository cancelledAppointmentRepository;
 
 
     /**
@@ -73,7 +88,7 @@ public class AdminService {
      * Block/unblock a user (admin action).
      */
     @Transactional
-    public void setUserStatus(Long actingAdminUserId, Long targetUserId, User.Status status) {
+    public String setUserStatus(Long actingAdminUserId, Long targetUserId, User.Status status) {
         Admin acting = adminRepository.findByUserId(actingAdminUserId)
                 .orElseThrow(() -> new ForbiddenException("Only admins can set user status"));
         if (!acting.getUser().getStatus().equals(User.Status.ACTIVE)) {
@@ -84,6 +99,7 @@ public class AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         user.setStatus(status);
         userRepository.save(user);
+        return user.getFullName();
     }
 
     /**
@@ -91,7 +107,7 @@ public class AdminService {
      */
     @Transactional(readOnly = true)
     public List<Appointment> viewPendingAppointments() {
-        return appointmentRepository.findByStatus(Appointment.AppointmentStatus.PENDING);
+        return appointmentRepository.findByStatusAndIsReconsultFalse(Appointment.AppointmentStatus.PENDING);
     }
 
     /**
@@ -99,80 +115,131 @@ public class AdminService {
      * - Ensures slot availability and specialization match.
      * - Refund/reschedule flow handled by caller if necessary.
      */
+   
     @Transactional
-    public Appointment reassignAppointment(Long actingAdminUserId, Long appointmentId, Long newDoctorUserId, Long newAvailabilityId) {
-        // ensure admin
+    public Appointment reassignAppointment(Long actingAdminUserId,
+                                           Long appointmentId,
+                                           Long newDoctorUserId,
+                                           LocalDateTime requestedDateTime) {
+
+        // 1. Ensure acting user is admin
         adminRepository.findByUserId(actingAdminUserId)
                 .orElseThrow(() -> new ForbiddenException("Only admins can reassign appointments"));
 
+        // 2. Load appointment
         Appointment appt = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
-        // Acquire lock checks: ensure nobody else is working
-        if (lockService.isLockedAndActive(appt)) {
-            throw new ConflictException("Appointment currently locked by another user");
-        }
-        lockService.applyLock(appt, actingAdminUserId);
-
-        // free previous slot (if present)
-        if (appt.getScheduledDateTime() != null && appt.getDoctor() != null) {
-            List<Availability> prev = availabilityRepository
-                    .findByDoctorUserUserIdAndDate(appt.getDoctor().getUser().getUserId(), appt.getScheduledDateTime().toLocalDate());
-            for (Availability s : prev) {
-                if (s.getStartTime().equals(appt.getScheduledDateTime().toLocalTime())) {
-                    s.setBooked(false);
-                    availabilityRepository.save(s);
-                    break;
-                }
-            }
+        // 3. Acquire lock
+        if (!lockService.isLockedAndActive(appt)) {
+            throw new ConflictException("Appointment is not locked. Please acquire lock before reassigning.");
         }
 
-        // assign new doctor & slot
+        if (!appt.getLockedBy().equals(actingAdminUserId)) {
+            throw new ConflictException("Appointment currently locked by another user.");
+        }
+
+        // 4. Validate new doctor
         Doctor newDoctor = doctorRepository.findByUserId(newDoctorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
         if (!newDoctor.getSpecialization().equals(appt.getSpecialization())) {
             throw new ConflictException("New doctor specialization mismatch");
         }
-        Availability newSlot = availabilityRepository.findById(newAvailabilityId)
-                .orElseThrow(() -> new ResourceNotFoundException("Slot not found"));
-        if (newSlot.isBooked()) throw new ConflictException("Slot already booked");
-        if (!newSlot.getDoctor().getUser().getUserId().equals(newDoctorUserId)) throw new ConflictException("Slot doesn't belong to chosen doctor");
 
-        newSlot.setBooked(true);
-        availabilityRepository.save(newSlot);
+        // 5. Validate requested datetime
+        if (!requestedDateTime.isAfter(LocalDateTime.now())) {
+            throw new ConflictException("Requested slot must be in the future");
+        }
+        appointmentService.validateSlotTime(requestedDateTime);
 
+        // 6. Check doctor leave
+        if (doctorLeaveRepository.existsByDoctorUserUserIdAndLeaveDate(newDoctorUserId, requestedDateTime.toLocalDate())) {
+            throw new ConflictException("Doctor is on leave that date");
+        }
+
+        // 7. Check conflicts: another appointment at same datetime
+        if (appointmentRepository.existsByDoctorUserUserIdAndScheduledDateTime(newDoctorUserId, requestedDateTime)) {
+            throw new ConflictException("Requested slot already booked");
+        }
+
+        // 8. Check blocked slots
+        boolean blocked = availabilityRepository.existsByDoctorUserUserIdAndDateAndStartTimeAndBlockedTrue(
+                newDoctorUserId, requestedDateTime.toLocalDate(), requestedDateTime.toLocalTime());
+        if (blocked) throw new ConflictException("Requested slot is blocked/unavailable");
+
+        // 9. Update appointment
+        LocalDateTime oldDateTime = appt.getScheduledDateTime();
         appt.setDoctor(newDoctor);
-        appt.setScheduledDateTime(java.time.LocalDateTime.of(newSlot.getDate(), newSlot.getStartTime()));
-        String meetLink;
+        appt.setScheduledDateTime(requestedDateTime);
+        appt.setReAssigned(true);
+        appt.setStatus(Appointment.AppointmentStatus.CONFIRMED);
+
+        // 10. Generate Google Meet link
         try {
-            meetLink = googleMeetService.createGoogleMeetEvent(
-                "Consultation with Dr. " + appt.getDoctor().getUser().getFullName(),
-                "Appointment reassigned via MediCare HMS",
-                appt.getScheduledDateTime(),
-                30 // Duration in minutes
+        	String meetLink = zoomService.createZoomMeeting(
+                    "Consultation with Dr. " + appt.getDoctor().getUser().getFullName(),
+                    requestedDateTime,
+                    20
             );
             appt.setMeetingLink(meetLink);
         } catch (Exception e) {
-            throw new ConflictException("Could not generate Google Meet link for reassigned appointment: " + e.getMessage());
+            throw new ConflictException("Could not generate Zoom link for reassigned appointment: " + e.getMessage());
         }
-        // release lock and persist
+        
+        cancelledAppointmentRepository.findByAppointmentAppointmentId(appointmentId)
+        .ifPresent(c -> {
+            c.setReassigned(true);
+            cancelledAppointmentRepository.save(c);
+        });
+
+
         lockService.releaseLock(appt);
         Appointment saved = appointmentRepository.save(appt);
 
-        // notify parties
-        emailService.sendAppointmentRescheduledEmail(saved.getPatient().getUser().getEmailId(),
+        // 11. Notify parties
+        emailService.sendAppointmentRescheduledEmail(
+                saved.getPatient().getUser().getEmailId(),
                 saved.getPatient().getUser().getFullName(),
-                null, saved.getScheduledDateTime(), saved.getMeetingLink());
+                oldDateTime,
+                saved.getScheduledDateTime(),
+                saved.getMeetingLink()
+        );
 
-        emailService.sendAppointmentRescheduledEmail(saved.getDoctor().getUser().getEmailId(),
+        emailService.sendAppointmentRescheduledEmail(
+                saved.getDoctor().getUser().getEmailId(),
                 saved.getDoctor().getUser().getFullName(),
-                null, saved.getScheduledDateTime(), saved.getMeetingLink());
+                oldDateTime,
+                saved.getScheduledDateTime(),
+                saved.getMeetingLink()
+        );
 
         return saved;
     }
     
-    public List<Admin> getAllAdmins() {
-        return adminRepository.findAll();
+    public List<AdminDTO> getAllAdmins(Long adminUserId) {
+    	
+    	Admin actingAdmin = adminRepository.findByUserId(adminUserId)
+    			.orElseThrow(() -> new ResourceNotFoundException("Admin not found."));
+    	
+    	if(!actingAdmin.isSuperAdmin())
+    		throw new ForbiddenException("Only super admin can get all admins.");
+    	
+        return adminRepository.findAll()
+        		.stream()
+        		.map(admin -> {
+        			AdminDTO dto = new AdminDTO(
+        					admin.getUser().getUserId(),
+        					admin.getUser().getFullName(),
+        					admin.getUser().getEmailId(),
+        					admin.getUser().getPhoneNumber(),
+        					admin.getUser().getStatus(),
+        					admin.getUser().getCreatedAt(),
+        					admin.getUser().getUpdatedAt(),
+        					admin.isSuperAdmin()        					
+        					);
+        			return dto;
+        		})
+        		.toList();
     }
 
     @Transactional
@@ -212,15 +279,19 @@ public class AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
 
         User user = target.getUser();
-        user.setFullName(req.getFullName());
-        user.setEmailId(req.getEmail());
-        user.setPhoneNumber(req.getPhoneNumber());
+        
+        if(req.getFullName() != null && !req.getFullName().isBlank())
+        	user.setFullName(req.getFullName());
+        if(req.getEmail() != null && !req.getEmail().isBlank())
+        	user.setEmailId(req.getEmail());
+        if(req.getPhoneNumber() != null && !req.getPhoneNumber().isBlank())
+        	user.setPhoneNumber(req.getPhoneNumber());
         if (req.getRawPassword() != null && !req.getRawPassword().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(req.getRawPassword()));
         }
 
         userRepository.save(user);
-
+        
         target.setSuperAdmin(req.isSuperAdmin());
 
         return adminRepository.save(target);
@@ -228,7 +299,7 @@ public class AdminService {
 
 
     @Transactional
-    public void blockAdmin(Long actingAdminUserId, Long targetAdminUserId) {
+    public String blockAdmin(Long actingAdminUserId, Long targetAdminUserId) {
         Admin acting = adminRepository.findByUserId(actingAdminUserId)
                 .orElseThrow(() -> new ForbiddenException("Only admins can block admins"));
 
@@ -240,16 +311,17 @@ public class AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
 
         if (target.isSuperAdmin()) {
-            throw new ConflictException("Cannot delete Super Admin");
+            throw new ConflictException("Cannot block Super Admin");
         }
 
         User user = target.getUser();
         user.setStatus(User.Status.BLOCKED);
         userRepository.save(user);
+        return user.getFullName();
     }
     
     @Transactional
-    public void deleteAdmin(Long actingAdminUserId, Long targetAdminUserId) {
+    public String deleteAdmin(Long actingAdminUserId, Long targetAdminUserId) {
         Admin acting = adminRepository.findByUserId(actingAdminUserId)
                 .orElseThrow(() -> new ForbiddenException("Only admins can delete admins"));
 
@@ -264,9 +336,14 @@ public class AdminService {
             throw new ConflictException("Cannot delete Super Admin");
         }
 
-
+        
         User user = target.getUser();
+        adminRepository.delete(target);
+        
+        String name=user.getFullName();
         userRepository.delete(user);
+        
+        return name;
     }
 
 }

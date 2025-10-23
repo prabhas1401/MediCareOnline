@@ -28,15 +28,15 @@ public class PatientController {
 
     private final PatientService patientService;
     
-    @PostMapping("/profile")
+    @PostMapping("/profile")			//Done
     public ResponseEntity<ApiResponse<Patient>> updateProfile(@Valid @RequestBody PatientProfileUpdateRequest req,
                                                 Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
         Patient updated = patientService.updatePatientProfile(userId, req);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Profile updated successfully.", updated));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Profile updated successfully.", null));
     }
 
-    @GetMapping("/profile")
+    @GetMapping("/profile")			//Done
     public ResponseEntity<Patient> getProfile(Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
         Patient patient = patientService.getPatientByUserId(userId);

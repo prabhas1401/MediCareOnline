@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.medicare.dto.PatientAdminUpdateRequest;
+import com.medicare.dto.PatientDTO;
 import com.medicare.dto.PatientProfileUpdateRequest;
 import com.medicare.dto.RegisterPatientRequest;
 import com.medicare.entity.Patient;
@@ -12,6 +14,7 @@ import com.medicare.entity.User;
 import com.medicare.exception.ConflictException;
 import com.medicare.exception.ForbiddenException;
 import com.medicare.exception.ResourceNotFoundException;
+import com.medicare.mapper.MapPatient;
 import com.medicare.repository.AdminRepository;
 import com.medicare.repository.PatientRepository;
 import com.medicare.repository.UserRepository;
@@ -29,7 +32,7 @@ public class PatientService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public Patient createPatientByAdmin(RegisterPatientRequest req) {
+    public Patient createPatient(RegisterPatientRequest req) {
         if (userRepository.existsByEmailId(req.getEmailId())) {
             throw new IllegalArgumentException("Email already in use");
         }
@@ -56,23 +59,25 @@ public class PatientService {
     }
 
     @Transactional
-    public Patient updatePatientByAdmin(Long patientUserId, Patient patientPayload, User.Status newStatus) {
-        User user = userRepository.findById(patientUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if (user.getRole() != User.Role.PATIENT) throw new ConflictException("User must be a patient");
-
-        // Update user status if provided (active, inactive, blocked)
-        if (newStatus != null) {
-            user.setStatus(newStatus);
-            userRepository.save(user);
-        }
-
-        Patient patient = patientRepository.findByUserId(patientUserId).orElse(new Patient());
-        patient.setUser(user);
+    public Patient updatePatient(Long patientUserId, PatientAdminUpdateRequest req) {
+    	
+        Patient patient = patientRepository.findByUserId(patientUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient not found"));
         
-        // update gender and DOB as well
-        patient.setGender(patientPayload.getGender());
-        patient.setDateOfBirth(patientPayload.getDateOfBirth());
+        User user = patient.getUser();
+        if (user.getRole() != User.Role.PATIENT)
+            throw new ConflictException("User is not a patient");
+        
+        if (req.getFullName() != null && !req.getFullName().isBlank())
+            user.setFullName(req.getFullName());
+
+        if (req.getPhoneNumber() != null && !req.getPhoneNumber().isBlank())
+            user.setPhoneNumber(req.getPhoneNumber());
+
+        if (req.getStatus() != null)
+            user.setStatus(req.getStatus());
+
+        userRepository.save(user);
 
         return patientRepository.save(patient);
     }
@@ -103,8 +108,12 @@ public class PatientService {
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found"));
     }
     
-    public List<Patient> getAllPatients() {
-        return patientRepository.findAll();
+    public List<PatientDTO> getAllPatients() {
+    	List<PatientDTO> listPatients = patientRepository.findAll()
+    			.stream()
+    			.map(MapPatient::toDTO)
+    			.toList();
+        return listPatients;
     }
 
     @Transactional
@@ -133,6 +142,8 @@ public class PatientService {
 
         // Soft delete
         User user = patient.getUser();
+        
+        patientRepository.delete(patient);
         userRepository.delete(user);
     }
 

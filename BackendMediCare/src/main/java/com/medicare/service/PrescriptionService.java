@@ -10,11 +10,13 @@ import com.medicare.entity.Appointment;
 import com.medicare.entity.Doctor;
 import com.medicare.entity.Patient;
 import com.medicare.entity.Prescription;
+import com.medicare.entity.User;
 import com.medicare.exception.ConflictException;
 import com.medicare.exception.ForbiddenException;
 import com.medicare.exception.ResourceNotFoundException;
 import com.medicare.repository.AppointmentRepository;
 import com.medicare.repository.PrescriptionRepository;
+import com.medicare.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class PrescriptionService {
     private final AppointmentRepository appointmentRepository;
     private final EmailService emailService;
     private final PrescriptionPdfGenerator pdfGenerator;
+    private final UserRepository userRepository;
 
     @Transactional
     public Prescription addPrescription(Long appointmentId, Long doctorUserId, AddPrescriptionRequest req) {
@@ -105,12 +108,20 @@ public class PrescriptionService {
     }
 
 
-    public List<Prescription> findByDoctorUserId(Long doctorUserId) {
-        return prescriptionRepository.findByAppointmentDoctorUserUserId(doctorUserId);
-    }
-
-    public List<Prescription> findByPatientUserId(Long patientUserId) {
-        return prescriptionRepository.findByAppointmentPatientUserUserId(patientUserId);
+    public List<Prescription> findByUserId(Long actingUserId) {
+    	
+    	User user = userRepository.findById(actingUserId)
+    			.orElseThrow(()->new ResourceNotFoundException("User not found."));
+    	
+    	if(user.getRole() == User.Role.DOCTOR) {
+    		return prescriptionRepository.findByAppointmentDoctorUserUserId(actingUserId);
+    	}
+    	else if(user.getRole() == User.Role.PATIENT) {
+            return prescriptionRepository.findByAppointmentPatientUserUserId(actingUserId);
+    	}
+    	else {
+            return prescriptionRepository.findAll();
+    	}	
     }
     
     
