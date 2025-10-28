@@ -1,9 +1,12 @@
+
 package com.medicare.service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -11,76 +14,111 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class ZoomService {
 
-    @Value("${zoom.client-id}")
-    private String clientId;
-
-    @Value("${zoom.client-secret}")
-    private String clientSecret;
-
-    @Value("${zoom.account-id}")
+    @Value("${zoom.account-id}")  // Updated to match your property name
     private String accountId;
 
+    @Value("${zoom.client-id}")  // Updated to match your property name
+    private String clientId;
+
+    @Value("${zoom.client-secret}")  // Updated to match your property name
+    private String clientSecret;
+
     private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // Get access token using Server-to-Server OAuth
     private String getAccessToken() {
-        String url = "https://zoom.us/oauth/token?grant_type=account_credentials&account_id=" + accountId;
+        try {
+            String tokenUrl = "https://zoom.us/oauth/token";
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBasicAuth(clientId, clientSecret);
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            // Create Basic Auth header
+            String auth = clientId + ":" + clientSecret;
+            String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes());
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.set("Authorization", "Basic " + encodedAuth);
 
-        HttpEntity<String> request = new HttpEntity<>(headers);
+            // Request body
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("grant_type", "account_credentials");
+            body.add("account_id", accountId);
 
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, request, String.class);
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
 
-        System.out.println("Zoom Auth Response: " + response.getBody());  // 👈 DEBUG THIS
+            ResponseEntity<String> response = restTemplate.exchange(tokenUrl, HttpMethod.POST, request, String.class);
 
-        JSONObject json = new JSONObject(response.getBody());
-        if (!json.has("access_token")) {
-            throw new RuntimeException("Zoom did not return access_token. Full Response: " + json);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                JsonNode jsonNode = objectMapper.readTree(response.getBody());
+                return jsonNode.get("access_token").asText();
+            } else {
+                log.error("Failed to get Zoom access token: {}", response.getBody());
+                throw new RuntimeException("Failed to get Zoom access token: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error getting Zoom access token: {}", e.getMessage(), e);
+            throw new RuntimeException("Could not get Zoom access token: " + e.getMessage());
         }
-
-        return json.getString("access_token");
     }
 
-
+    // Create a Zoom meeting
     public String createZoomMeeting(String topic, LocalDateTime startTime, int durationMinutes) {
-        String accessToken = getAccessToken();
-        String url = "https://api.zoom.us/v2/users/me/meetings";
+        try {
+            String accessToken = getAccessToken();
+            String meetingUrl = "https://api.zoom.us/v2/users/me/meetings";
 
-        JSONObject payload = new JSONObject();
-        payload.put("topic", topic);
-        payload.put("type", 2); // Scheduled meeting (must be type=2 for future meeting)
-        payload.put("start_time", startTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "Z"); // 👈 ADD 'Z' FOR UTC
-        payload.put("duration", durationMinutes);
-        payload.put("timezone", "Asia/Kolkata");
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + accessToken);
 
-        JSONObject settings = new JSONObject();
-        settings.put("join_before_host", true);
-        settings.put("waiting_room", false);
-        payload.put("settings", settings);
+            // Meeting details
+            Map<String, Object> meetingDetails = new HashMap<>();
+            meetingDetails.put("topic", topic);
+            meetingDetails.put("type", 2);  // Scheduled meeting
+            meetingDetails.put("start_time", startTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "Z");  // ISO format with Z
+            meetingDetails.put("duration", durationMinutes);
+            meetingDetails.put("timezone", "UTC");
+            meetingDetails.put("agenda", "Medical Consultation");
+            meetingDetails.put("settings", Map.of(
+                "host_video", true,
+                "participant_video", true,
+                "join_before_host", false,
+                "mute_upon_entry", true,
+                "watermark", false,
+                "use_pmi", false,
+                "approval_type", 0,
+                "audio", "both",
+                "auto_recording", "none"
+            ));
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(accessToken);
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(meetingDetails, headers);
 
-        HttpEntity<String> entity = new HttpEntity<>(payload.toString(), headers);
+            ResponseEntity<String> response = restTemplate.exchange(meetingUrl, HttpMethod.POST, request, String.class);
 
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-
-        System.out.println("Zoom Create Meeting Response: " + response.getBody());  // 👈 PRINT THIS
-
-        JSONObject json = new JSONObject(response.getBody());
-        if (!json.has("join_url")) {
-            throw new RuntimeException("Zoom did not return join_url. Full Response: " + json);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                JsonNode jsonNode = objectMapper.readTree(response.getBody());
+                String joinUrl = jsonNode.get("join_url").asText();
+                log.info("Zoom meeting created successfully: {}", joinUrl);
+                return joinUrl;
+            } else {
+                log.error("Failed to create Zoom meeting: {}", response.getBody());
+                throw new RuntimeException("Failed to create Zoom meeting: " + response.getStatusCode() + " - " + response.getBody());
+            }
+        } catch (Exception e) {
+            log.error("Error creating Zoom meeting: {}", e.getMessage(), e);
+            throw new RuntimeException("Could not generate Zoom link: " + e.getMessage());
         }
-
-        return json.getString("join_url"); 
     }
-
 }

@@ -1,3 +1,4 @@
+
 package com.medicare.service;
 
 import java.util.Base64;
@@ -17,10 +18,11 @@ import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 
 import lombok.RequiredArgsConstructor;
-
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RazorpayService {
 
     @Value("${razorpay.keyId}")
@@ -29,8 +31,17 @@ public class RazorpayService {
     @Value("${razorpay.keySecret}")
     private String keySecret;
 
+    private RazorpayClient client;
+
+    private RazorpayClient getClient() throws RazorpayException {
+        if (client == null) {
+            client = new RazorpayClient(keyId, keySecret);
+        }
+        return client;
+    }
+
     public Map<String, Object> createOrder(Long patientId, PaymentInitRequest req) throws RazorpayException {
-        RazorpayClient client = new RazorpayClient(keyId, keySecret);
+        RazorpayClient client = getClient();
 
         JSONObject orderRequest = new JSONObject();
         orderRequest.put("amount", 500 * 100);
@@ -45,21 +56,18 @@ public class RazorpayService {
                 "patientId", patientId
         );
     }
-    
-    
-    // NEW: Fetch payment method from Razorpay
+
     public String getPaymentMethod(String paymentId) {
         try {
-            RazorpayClient client = new RazorpayClient(keyId, keySecret);
-            com.razorpay.Payment payment = client.payments.fetch(paymentId); // <-- full name here
-            return payment.get("method");
+            RazorpayClient client = getClient();
+            com.razorpay.Payment payment = client.payments.fetch(paymentId);
+            return payment.get("method").toString();
         } catch (RazorpayException e) {
+            log.error("Failed to fetch payment method for paymentId: {}", paymentId, e);
             throw new RuntimeException("Failed to fetch payment method from Razorpay", e);
         }
     }
 
-
-    // NEW: Map Razorpay method string to Payment.Method
     public Payment.Method mapRazorpayMethod(String razorpayMethod) {
         if (razorpayMethod == null) return Payment.Method.CARD;
         switch (razorpayMethod.toLowerCase()) {
@@ -72,13 +80,26 @@ public class RazorpayService {
         }
     }
 
-
     public boolean verifySignature(String orderId, String paymentId, String signature) {
         try {
             String payload = orderId + "|" + paymentId;
-            String expected = hmacSha256(payload, keySecret);
-            return expected.equals(signature);
+            String expectedSignature = hmacSha256(payload, keySecret);
+
+            // Handle if signature is sent as hex (convert to base64)
+            String receivedSignature = signature;
+            if (signature.length() == 64 && signature.matches("[0-9a-fA-F]+")) {
+                byte[] bytes = hexStringToByteArray(signature);
+                receivedSignature = Base64.getEncoder().encodeToString(bytes);
+            }
+
+            boolean isValid = expectedSignature.equals(receivedSignature);
+            if (!isValid) {
+                log.warn("Signature verification failed. OrderId: {}, PaymentId: {}, Expected: {}, Received: {}", 
+                         orderId, paymentId, expectedSignature, receivedSignature);
+            }
+            return isValid;
         } catch (Exception e) {
+            log.error("Error during signature verification for OrderId: {}, PaymentId: {}", orderId, paymentId, e);
             return false;
         }
     }
@@ -88,5 +109,15 @@ public class RazorpayService {
         SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
         sha256.init(secretKey);
         return Base64.getEncoder().encodeToString(sha256.doFinal(payload.getBytes()));
+    }
+
+    private byte[] hexStringToByteArray(String hex) {
+        int len = hex.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
+                                 + Character.digit(hex.charAt(i + 1), 16));
+        }
+        return data;
     }
 }

@@ -26,7 +26,13 @@ public class CancelledAppointmentMapper {
 
         dto.setAppointment(toAppointmentSummary(entity.getAppointment()));
         dto.setCancelledByDoctor(toDoctorShort(entity.getCancelledByDoctor()));
-
+        dto.setPreviousScheduledDateTime(entity.getPreviousScheduledDateTime());
+        if (entity.getAppointment() != null && entity.getAppointment().getDoctor() != null) {
+            dto.setDoctorName(entity.getAppointment().getDoctor().getUser().getFullName());
+            dto.setSpecialization(entity.getAppointment().getDoctor().getSpecialization().name());
+        }
+        dto.setCancellationDateTime(entity.getCancelledAt());
+        dto.setCancelledBy(entity.getCancelledByDoctor() != null ? entity.getCancelledByDoctor().getUser().getFullName() : "System/Admin");
         return dto;
     }
 

@@ -36,6 +36,7 @@ public class CancelledAppointment {
 
     private String reason;
     private LocalDateTime cancelledAt;
+    private LocalDateTime previousScheduledDateTime;
     
     @Column(nullable = false)
     private boolean reassigned = false;

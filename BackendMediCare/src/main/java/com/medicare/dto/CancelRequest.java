@@ -7,3 +7,4 @@ public class CancelRequest {
     public boolean byAdmin = false;
     public String reason;
 }
+

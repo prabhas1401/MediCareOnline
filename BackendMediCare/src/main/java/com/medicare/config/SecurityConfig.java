@@ -1,28 +1,34 @@
 
+
 package com.medicare.config;
 
-import com.medicare.security.JwtAuthFilter;
-import com.medicare.service.TokenService;
-import lombok.RequiredArgsConstructor;
+import java.util.Arrays;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.medicare.security.JwtAuthFilter;
+import com.medicare.service.TokenService;
+
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @RequiredArgsConstructor
 @EnableMethodSecurity
 public class SecurityConfig {
-	
+    
     private final TokenService tokenService;
 
     @Bean
@@ -35,33 +41,36 @@ public class SecurityConfig {
         return new JwtAuthFilter(tokenService);
     }
     
+    // CORS configuration
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+    
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // API server; if you have forms, re-enable properly
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // public auth endpoints (registration, login, verify, forgot/reset)
                 .requestMatchers("/api/auth/**").permitAll()
-
-                // static and swagger (if any) could be public
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-
-                // role-restricted endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/doctor/**").hasRole("DOCTOR")
                 .requestMatchers("/api/patient/**").hasRole("PATIENT")
-
-                // endpoints that any authenticated user can access
                 .requestMatchers("/api/common/**").authenticated()
-
-                // everything else requires authentication
                 .anyRequest().authenticated()
             )
-            // add JWT filter
             .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
-
-            // default exception handling (can be enhanced with AuthenticationEntryPoint)
             .httpBasic(Customizer.withDefaults());
 
         return http.build();
@@ -71,6 +80,4 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
         return http.getSharedObject(AuthenticationManager.class);
     }
-    
-    
 }

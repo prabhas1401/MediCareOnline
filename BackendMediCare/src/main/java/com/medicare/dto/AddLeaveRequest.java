@@ -11,3 +11,4 @@ public class AddLeaveRequest {
     public LocalDate date;
     public String reason;
 }
+

@@ -1,3 +1,4 @@
+
 package com.medicare.mapper;
 
 import com.medicare.dto.AppointmentSummary;

@@ -11,7 +11,6 @@ import com.medicare.dto.AdminDTO;
 import com.medicare.dto.AdminRegistrationRequest;
 import com.medicare.entity.Admin;
 import com.medicare.entity.Appointment;
-import com.medicare.entity.CancelledAppointment;
 import com.medicare.entity.Doctor;
 import com.medicare.entity.User;
 import com.medicare.exception.ConflictException;

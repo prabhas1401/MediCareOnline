@@ -14,4 +14,3 @@ public class AdminRegistrationRequest {
     private String rawPassword;
     private boolean superAdmin;
 }
-

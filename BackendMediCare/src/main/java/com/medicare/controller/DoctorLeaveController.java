@@ -29,9 +29,7 @@ public class DoctorLeaveController {
 
     @GetMapping("/doctor/{doctorUserId}")			//Done
     public ResponseEntity<List<DoctorLeave>> getLeaves(@PathVariable Long doctorUserId, Authentication authentication) {
-    	
     	Long actingUserId = (Long) authentication.getPrincipal();
-    	
         return ResponseEntity.ok(doctorLeaveService.getLeavesForDoctor(doctorUserId, actingUserId));
     }
 }

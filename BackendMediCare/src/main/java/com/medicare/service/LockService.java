@@ -51,4 +51,3 @@ public class LockService {
         appointment.setLockExpiry(null);
     }
 }
-

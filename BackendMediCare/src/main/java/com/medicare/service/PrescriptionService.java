@@ -1,11 +1,14 @@
 package com.medicare.service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.medicare.dto.AddPrescriptionRequest;
 import com.medicare.dto.PrescriptionDetailDto;
+import com.medicare.dto.PrescriptionResponseDTO;
 import com.medicare.entity.Appointment;
 import com.medicare.entity.Doctor;
 import com.medicare.entity.Patient;
@@ -14,6 +17,7 @@ import com.medicare.entity.User;
 import com.medicare.exception.ConflictException;
 import com.medicare.exception.ForbiddenException;
 import com.medicare.exception.ResourceNotFoundException;
+import com.medicare.mapper.PrescriptionMapper;
 import com.medicare.repository.AppointmentRepository;
 import com.medicare.repository.PrescriptionRepository;
 import com.medicare.repository.UserRepository;
@@ -30,7 +34,6 @@ public class PrescriptionService {
     private final EmailService emailService;
     private final PrescriptionPdfGenerator pdfGenerator;
     private final UserRepository userRepository;
-
     @Transactional
     public Prescription addPrescription(Long appointmentId, Long doctorUserId, AddPrescriptionRequest req) {
         Appointment appt = appointmentRepository.findById(appointmentId)
@@ -106,23 +109,37 @@ public class PrescriptionService {
 
         return pdfGenerator.generatePdf(presc);
     }
-
-
     public List<Prescription> findByUserId(Long actingUserId) {
-    	
-    	User user = userRepository.findById(actingUserId)
-    			.orElseThrow(()->new ResourceNotFoundException("User not found."));
-    	
-    	if(user.getRole() == User.Role.DOCTOR) {
-    		return prescriptionRepository.findByAppointmentDoctorUserUserId(actingUserId);
-    	}
-    	else if(user.getRole() == User.Role.PATIENT) {
+        
+        User user = userRepository.findById(actingUserId)
+                .orElseThrow(()->new ResourceNotFoundException("User not found."));
+        
+        if(user.getRole() == User.Role.DOCTOR) {
+            return prescriptionRepository.findByAppointmentDoctorUserUserId(actingUserId);
+        }
+        else if(user.getRole() == User.Role.PATIENT) {
             return prescriptionRepository.findByAppointmentPatientUserUserId(actingUserId);
-    	}
-    	else {
+        }
+        else {
             return prescriptionRepository.findAll();
-    	}	
+        }   
     }
-    
-    
+
+    // Added: Method to find prescriptions by patient user ID
+    public List<Prescription> findByPatientUserId(Long patientUserId) {
+        return prescriptionRepository.findByAppointmentPatientUserUserId(patientUserId);
+    }
+
+    // In PrescriptionService.java
+    public void requestRefill(Long prescriptionId, Long patientUserId) {
+        // Logic: Notify doctor or mark prescription for refill
+        Prescription prescription = prescriptionRepository.findById(prescriptionId).orElseThrow(() -> new ResourceNotFoundException("Prescription not found"));
+        // Add refill request logic (e.g., update status or send email)
+    }
+
+    public void bookFollowUp(Long prescriptionId, Long patientUserId, String preferredDate) {
+        // Logic: Create a follow-up appointment
+        Prescription prescription = prescriptionRepository.findById(prescriptionId).orElseThrow(() -> new ResourceNotFoundException("Prescription not found"));
+        // Create appointment based on prescription details
+    }
 }

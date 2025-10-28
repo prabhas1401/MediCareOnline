@@ -1,3 +1,4 @@
+
 package com.medicare.entity;
 
 import java.time.LocalDateTime;
@@ -35,9 +36,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Appointment {
-
     public enum AppointmentStatus {
-        PENDING, CONFIRMED, CANCELLED, COMPLETED
+        PENDING, CONFIRMED, IN_PROGRESS, CANCELLED, COMPLETED  // Added IN_PROGRESS for start visit
     }
     
     public enum Symptom {
@@ -94,7 +94,7 @@ public class Appointment {
     @JsonIgnore
     private Prescription prescription;
 
-    private String meetingLink;
+    private String meetingLink;  // For Zoom link
     
     @Column(nullable = false)
     private Double fee;
@@ -105,13 +105,14 @@ public class Appointment {
     @JoinColumn(name = "original_appointment_id")
     private Appointment originalAppointment;
     
+    @Column
     private Long lockedBy;
     private LocalDateTime lockExpiry;
     
+    @Column
     private boolean reAssigned = false;
     
-	public void setIsReconsult(boolean b) {
-		this.isReconsult=b;
-	}
-    
+    public void setIsReconsult(boolean b) {
+        this.isReconsult = b;
+    }
 }

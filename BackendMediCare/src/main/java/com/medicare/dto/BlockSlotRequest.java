@@ -14,4 +14,3 @@ public class BlockSlotRequest {
     private LocalTime startTime;
     private String reason;
 }
-

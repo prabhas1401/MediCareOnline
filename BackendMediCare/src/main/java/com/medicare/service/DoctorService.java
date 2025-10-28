@@ -1,6 +1,6 @@
 package com.medicare.service;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -10,11 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.medicare.dto.DoctorDTO;
 import com.medicare.dto.DoctorProfileUpdateRequest;
+import com.medicare.dto.RegisterPatientRequest;  // Ensure this DTO exists; create if needed
 import com.medicare.dto.RegisterRequest;
 import com.medicare.entity.Appointment;
-import com.medicare.entity.Availability;
 import com.medicare.entity.Doctor;
-import com.medicare.entity.DoctorLeave;
 import com.medicare.entity.Patient;
 import com.medicare.entity.User;
 import com.medicare.exception.ConflictException;
@@ -44,22 +43,28 @@ public class DoctorService {
     private final DoctorLeaveService doctorLeaveService;
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
-	private final AppointmentRepository appointmentRepository;
-    
+    private final AppointmentRepository appointmentRepository;
+
     public Doctor getDoctorEntity(Long doctorUserId) {
         return doctorRepository.findByUserId(doctorUserId)
             .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
     }
 
- // Doctor updates own profile
+    public DoctorDTO getProfile(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        Doctor doctor = doctorRepository.findByUserId(userId).orElseThrow(() -> new RuntimeException("Doctor profile not found"));
+        return MapDoctor.toDTO(doctor);  // Use MapDoctor.toDTO instead of new DoctorDTO(doctor)
+    }
+
+    // Doctor updates own profile
     @Transactional
     public Doctor updateOwnProfile(Long doctorUserId, DoctorProfileUpdateRequest req) {
         User user = userRepository.findById(doctorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor user not found"));
-        
+
         if (user.getRole() != User.Role.DOCTOR)
             throw new ConflictException("User is not a doctor");
-        
+
         if (req.getFullName() != null && !req.getFullName().isBlank())
             user.setFullName(req.getFullName());
         if (req.getEmailId() != null && !req.getEmailId().isBlank())
@@ -68,7 +73,7 @@ public class DoctorService {
             user.setPhoneNumber(req.getPhoneNumber());
         if (req.getRawPassword() != null && !req.getRawPassword().isBlank())
             user.setPasswordHash(passwordEncoder.encode(req.getRawPassword()));
-        
+
         userRepository.save(user);
 
         // ✅ Update Doctor entity
@@ -141,23 +146,23 @@ public class DoctorService {
         }
 
         if(req.getFullName() != null && !req.getFullName().isBlank())
-        	user.setFullName(req.getFullName());
+            user.setFullName(req.getFullName());
         if(req.getPhoneNumber() != null && !req.getPhoneNumber().isBlank())
-        	user.setPhoneNumber(req.getPhoneNumber());
+            user.setPhoneNumber(req.getPhoneNumber());
         if(req.getStatus() != null)
-        	user.setStatus(req.getStatus());
-        
+            user.setStatus(req.getStatus());
+
         userRepository.save(user);
 
         Doctor existing = doctorRepository.findByUserId(doctorUserId).orElse(new Doctor());
         existing.setUser(user);
-        
+
         if(req.getQualification() != null && !req.getQualification().isBlank())
-        	existing.setQualification(req.getQualification());
-        
+            existing.setQualification(req.getQualification());
+
         if(req.getExperienceYears() > 0)
-        	existing.setExperienceYears(req.getExperienceYears());
-        
+            existing.setExperienceYears(req.getExperienceYears());
+
         if (req.getSpecialization() != null && !req.getSpecialization().isBlank()) {
             try {
                 existing.setSpecialization(Doctor.Specialization.valueOf(req.getSpecialization().toUpperCase()));
@@ -165,13 +170,11 @@ public class DoctorService {
                 throw new ConflictException("Invalid specialization value: " + req.getSpecialization());
             }
         }
-        
+
         return doctorRepository.save(existing);
     }
 
-
     public List<Doctor> findBySpecializationAndActive(Doctor.Specialization spec, Long adminUserId) {
-    	
         User actingAdmin = userRepository.findById(adminUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
         if (actingAdmin.getRole() != User.Role.ADMIN) {
@@ -184,7 +187,7 @@ public class DoctorService {
         return patientRepository.findByUserId(patientUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found"));
     }
-    
+
     public List<DoctorDTO> getAllDoctors() {
         return doctorRepository.findAll()
                 .stream()
@@ -206,7 +209,7 @@ public class DoctorService {
         user.setStatus(User.Status.BLOCKED);
         userRepository.save(user);
     }
-    
+
     @Transactional
     public void deleteDoctor(Long adminUserId, Long doctorUserId) {
         // Validate admin
@@ -215,27 +218,66 @@ public class DoctorService {
 
         Doctor doctor = doctorRepository.findByUserId(doctorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
-        
+
         if(doctor.getAppointments()!=null && !doctor.getAppointments().isEmpty()) {
-        	throw new ConflictException("Cannot delete a doctor with appointments.");
+            throw new ConflictException("Cannot delete a doctor with appointments.");
         }
 
         User user = doctor.getUser();
         doctorRepository.delete(doctor);
         userRepository.delete(user);
     }
-    
 
-	public List<Appointment> getPendingAppointmentsForDoctor(Long doctorUserId) {
-		Doctor doctor = doctorRepository.findByUserId(doctorUserId)
-				.orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
-		
-		
+    public List<Appointment> getPendingAppointmentsForDoctor(Long doctorUserId) {
+        Doctor doctor = doctorRepository.findByUserId(doctorUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
+
         return appointmentRepository.findByStatusAndSpecializationAndIsReconsultFalse(
-        		Appointment.AppointmentStatus.PENDING,
+                Appointment.AppointmentStatus.PENDING,
                 doctor.getSpecialization()
         );
-	}
+    }
 
+    // Added methods for new features
+    @Transactional
+    public User addPatient(RegisterPatientRequest request) {  // Changed to RegisterPatientRequest
+        User user = new User();
+        user.setFullName(request.getFullName());
+        user.setEmailId(request.getEmailId());
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setPasswordHash(passwordEncoder.encode(request.getRawPassword()));
+        user.setRole(User.Role.PATIENT);
+        user.setStatus(User.Status.ACTIVE);
+        userRepository.save(user);
+
+        Patient patient = new Patient();
+        patient.setUser(user);
+        patient.setGender(request.getGender());
+        patient.setDateOfBirth(request.getDateOfBirth());
+        patientRepository.save(patient);  // Assuming PatientRepository exists
+        return user;
+    }
+
+    @Transactional
+    public void rescheduleAppointment(Long id, String newDateTime) {
+        Appointment appointment = appointmentRepository.findById(id).orElseThrow(() -> new RuntimeException("Appointment not found"));
+        appointment.setScheduledDateTime(LocalDateTime.parse(newDateTime));
+        appointmentRepository.save(appointment);
+    }
+
+    public List<Appointment> getAppointments(Long userId) {
+        Doctor doctor = doctorRepository.findByUserId(userId).orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
+        return appointmentRepository.findByDoctorUserUserId(doctor.getUser().getUserId());  // Fixed: Use correct repository method
+    }
+    public boolean existsByPhone(String phoneNumber) {
+        return doctorRepository.existsByUserPhoneNumber(phoneNumber);
+    }
+    public boolean existsByEmail(String emailId) {
+        return doctorRepository.existsByUserEmailId(emailId);
+    }
+
+    public void addLeave(Long userId, String date) {
+        // Placeholder: Implement leave logic (e.g., save to DoctorLeave entity)
+        // For now, no-op
+    }
 }
-

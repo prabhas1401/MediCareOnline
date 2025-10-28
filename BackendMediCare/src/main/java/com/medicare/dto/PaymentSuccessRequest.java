@@ -1,3 +1,5 @@
+
+
 package com.medicare.dto;
 
 import java.time.LocalDateTime;
@@ -27,7 +29,7 @@ public class PaymentSuccessRequest {
         req.setSymptoms(this.symptoms);
         req.setAdditionalSymptoms(this.additionalSymptoms);
         req.setPreferredDate(this.preferredDate);
-        req.setFeePaid(500.0);
+        req.setFeePaid(500.0);  // Fixed fee as per your code
         return req;
     }
 }

@@ -1,3 +1,4 @@
+
 package com.medicare.dto;
 
 import java.time.LocalDateTime;
@@ -11,4 +12,10 @@ public class CancelledAppointmentDTO {
     private DoctorShortDTO cancelledByDoctor;
     private String reason;
     private LocalDateTime cancelledAt;
+    private LocalDateTime previousScheduledDateTime;
+    // Add new fields
+    private String doctorName;
+    private String specialization;
+    private LocalDateTime cancellationDateTime;
+    private String cancelledBy;
 }
