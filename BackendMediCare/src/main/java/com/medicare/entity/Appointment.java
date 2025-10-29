@@ -36,9 +36,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Appointment {
+<<<<<<< HEAD
 	public enum AppointmentStatus {
 	    PENDING, CONFIRMED, IN_PROGRESS, CANCELLED, COMPLETED, ARCHIVED  // Added ARCHIVED
 	}
+=======
+    public enum AppointmentStatus {
+        PENDING, CONFIRMED, IN_PROGRESS, CANCELLED, COMPLETED  // Added IN_PROGRESS for start visit
+    }
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
     
     public enum Symptom {
         FEVER,
@@ -98,8 +104,12 @@ public class Appointment {
     
     @Column(nullable = false)
     private Double fee;
+<<<<<<< HEAD
 //    @Column(name = "is_rescheduled", nullable = false)
 //    private Boolean isRescheduled = false;  // Default to false for new appointments
+=======
+    
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
     private boolean isReconsult = false;
 
     @OneToOne

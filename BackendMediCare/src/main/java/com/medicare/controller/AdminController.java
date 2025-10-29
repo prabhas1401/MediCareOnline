@@ -112,12 +112,15 @@ public class AdminController {
     public ResponseEntity<List<DoctorDTO>> listDoctors() {
         return ResponseEntity.ok(doctorService.getAllDoctors());
     }
+<<<<<<< HEAD
     @GetMapping("/appointments")
     public ResponseEntity<List<AppointmentDTO>> getAllAppointments() {
         List<Appointment> all = appointmentRepository.findAll();
         List<AppointmentDTO> dtos = all.stream().map(AppointmentMapper::toDTO).toList();
         return ResponseEntity.ok(dtos);
     }
+=======
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
     
     @GetMapping("/appointments/cancelled")
     public ResponseEntity<List<AppointmentDTO>> getCancelledAppointments() {

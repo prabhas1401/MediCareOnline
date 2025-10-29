@@ -1,9 +1,16 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react'; 
 import { patientAPI, prescriptionAPI, paymentAPI, appointmentAPI } from '../services/api';
 
 const PatientDashboard = () => {
   const [reconsultModal, setReconsultModal] = useState(false);
   const [selectedAppointmentForReconsult, setSelectedAppointmentForReconsult] = useState(null);
+=======
+import React, { useState, useEffect } from 'react';
+import { patientAPI, prescriptionAPI, paymentAPI, appointmentAPI } from '../services/api';
+
+const PatientDashboard = () => {
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
   const [activeSection, setActiveSection] = useState('profile');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState({ userId: '', fullName: '', emailId: '', phoneNumber: '', rawPassword: '' });
@@ -26,7 +33,10 @@ const PatientDashboard = () => {
   const [followUpModal, setFollowUpModal] = useState(false);
   const [preferredDate, setPreferredDate] = useState('');
   const [loading, setLoading] = useState(false);
+<<<<<<< HEAD
   const [clickedButtons, setClickedButtons] = useState({});  // Added: State to track clicked buttons
+=======
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 
   const symptomOptions = [
     'FEVER', 'COUGH', 'HEADACHE', 'CHEST_PAIN', 'NAUSEA', 'SHORTNESS_OF_BREATH', 'FATIGUE', 'OTHER'
@@ -54,8 +64,13 @@ const PatientDashboard = () => {
       setAppointments(appointmentsRes.data || []);
       setPrescriptions(prescriptionsRes.data || []);
       calculateStats(appointmentsRes.data || []);
+<<<<<<< HEAD
       console.log('Fetched appointments:', appointmentsRes.data);
       console.log('Fetched prescriptions:', prescriptionsRes.data);
+=======
+      console.log('Fetched appointments:', appointmentsRes.data);  // Added: Debug data
+      console.log('Fetched prescriptions:', prescriptionsRes.data);  // Added: Debug data
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
     } catch (err) {
       console.error('Fetch error:', err);
       alert('Error fetching data: ' + (err.response?.data?.message || err.message));
@@ -91,6 +106,7 @@ const PatientDashboard = () => {
     }
   };
 
+<<<<<<< HEAD
   const createReconsult = async (originalAppointmentId) => {
     try {
       await appointmentAPI.createReconsult(originalAppointmentId);
@@ -102,6 +118,8 @@ const PatientDashboard = () => {
     }
   };
 
+=======
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
   const initiatePayment = async () => {
     console.log('Pay Now button clicked');
     try {
@@ -198,7 +216,11 @@ const PatientDashboard = () => {
   };
 
   const printPrescription = (prescription) => {
+<<<<<<< HEAD
     console.log('Print button clicked, prescription data:', prescription);
+=======
+    console.log('Print button clicked, prescription data:', prescription);  // Added: Log to check if advice is null in frontend
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <html>
@@ -218,6 +240,10 @@ const PatientDashboard = () => {
     printWindow.document.close();
     printWindow.print();
   };
+<<<<<<< HEAD
+=======
+  
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 
   const requestRefill = async (prescriptionId) => {
     console.log('Request Refill button clicked for prescription ID:', prescriptionId);
@@ -229,6 +255,10 @@ const PatientDashboard = () => {
       alert('Error requesting refill: ' + (err.response?.data?.message || err.message));
     }
   };
+<<<<<<< HEAD
+=======
+  
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 
   const bookFollowUp = async (prescriptionId) => {
     console.log('Book Follow-up Confirm button clicked for prescription ID:', prescriptionId);
@@ -256,13 +286,18 @@ const PatientDashboard = () => {
     return matchesStatus && matchesSearch;
   });
 
+<<<<<<< HEAD
   console.log('Filtered prescriptions:', filteredPrescriptions);
+=======
+  console.log('Filtered prescriptions:', filteredPrescriptions);  // Added: Debug filtered data
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 
   const tableStyle = { width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.9rem' };
   const thStyle = { border: '1px solid #ddd', padding: '12px', backgroundColor: '#f2f2f2', textAlign: 'left' };
   const tdStyle = { border: '1px solid #ddd', padding: '12px' };
   const buttonStyle = { padding: '6px 12px', margin: '2px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' };
 
+<<<<<<< HEAD
   const getSidebarButtonStyle = (isActive) => ({
     
     background: 'none',
@@ -282,14 +317,27 @@ const PatientDashboard = () => {
     <div style={{ display: 'flex', fontFamily: 'Poppins, sans-serif', background: '#f4f8fb', minHeight: '100vh' }}>
       <div style={{ width: sidebarCollapsed ? '0' : '250px', background: 'white', color: 'black', padding: '1rem', transition: 'width 0.3s', overflow: 'hidden' }}>
         <button onClick={() => { console.log('Sidebar toggle clicked'); setSidebarCollapsed(!sidebarCollapsed); }} style={{ background: 'none', border: 'none', color: 'black', fontSize: '1.5rem', cursor: 'pointer' }}>
+=======
+  return (
+    <div style={{ display: 'flex', fontFamily: 'Poppins, sans-serif', background: '#f4f8fb', minHeight: '100vh' }}>
+      <div style={{ width: sidebarCollapsed ? '0' : '250px', background: '#007bff', color: 'white', padding: '1rem', transition: 'width 0.3s', overflow: 'hidden' }}>
+        <button onClick={() => { console.log('Sidebar toggle clicked'); setSidebarCollapsed(!sidebarCollapsed); }} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
           ☰
         </button>
         <h2>Patient Menu</h2>
         <ul style={{ listStyle: 'none', padding: 0 }}>
+<<<<<<< HEAD
           <li><button onClick={() => { console.log('Profile section clicked'); setActiveSection('profile'); }} style={getSidebarButtonStyle(activeSection === 'profile')}>Update Profile</button></li>
           <li><button onClick={() => { console.log('Book Appointment section clicked'); setActiveSection('bookAppointment'); }} style={getSidebarButtonStyle(activeSection === 'bookAppointment')}>Book Appointment</button></li>
           <li><button onClick={() => { console.log('Appointments section clicked'); setActiveSection('appointments'); }} style={getSidebarButtonStyle(activeSection === 'appointments')}>Your Appointments</button></li>
           <li><button onClick={() => { console.log('Prescriptions section clicked'); setActiveSection('prescriptions'); }} style={getSidebarButtonStyle(activeSection === 'prescriptions')}>Your Prescriptions</button></li>
+=======
+          <li><button onClick={() => { console.log('Profile section clicked'); setActiveSection('profile'); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Update Profile</button></li>
+          <li><button onClick={() => { console.log('Book Appointment section clicked'); setActiveSection('bookAppointment'); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Book Appointment</button></li>
+          <li><button onClick={() => { console.log('Appointments section clicked'); setActiveSection('appointments'); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Your Appointments</button></li>
+          <li><button onClick={() => { console.log('Prescriptions section clicked'); setActiveSection('prescriptions'); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Your Prescriptions</button></li>
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
         </ul>
       </div>
       <div style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
@@ -372,7 +420,11 @@ const PatientDashboard = () => {
             <thead>
               <tr>
                 <th style={thStyle}>Appointment ID</th>
+<<<<<<< HEAD
                 
+=======
+                <th style={thStyle}>Doctor Name</th>
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
                 <th style={thStyle}>Specialization</th>
                 <th style={thStyle}>Date & Time</th>
                 <th style={thStyle}>Status</th>
@@ -384,6 +436,10 @@ const PatientDashboard = () => {
               {filteredAppointments.map((a, index) => (
                 <tr key={a.appointmentId} style={index % 2 === 0 ? {} : { backgroundColor: '#f9f9f9' }}>
                   <td style={tdStyle}>{a.appointmentId}</td>
+<<<<<<< HEAD
+=======
+                  <td style={tdStyle}>{a.doctor?.fullName || 'Not Assigned'}</td>
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
                   <td style={tdStyle}>{a.specialization || 'N/A'}</td>
                   <td style={tdStyle}>{a.scheduledDateTime || a.preferredDate || 'N/A'}</td>
                   <td style={tdStyle}>
@@ -396,11 +452,17 @@ const PatientDashboard = () => {
                   </td>
                   <td style={tdStyle}>{a.createdAt}</td>
                   <td style={tdStyle}>
+<<<<<<< HEAD
                     <button style={{ ...getActionButtonStyle(`view-${a.appointmentId}`), background: '#17a2b8', color: 'white' }} onClick={() => { console.log('View Details clicked'); setSelectedAppointment(a); setClickedButtons(prev => ({ ...prev, [`view-${a.appointmentId}`]: true })); }}>View Details</button>
                     <button style={getActionButtonStyle(`cancel-${a.appointmentId}`)} onClick={() => { cancelAppointment(a.appointmentId); setClickedButtons(prev => ({ ...prev, [`cancel-${a.appointmentId}`]: true })); }}>Cancel</button>
                     {a.status === 'COMPLETED' && (
                       <button style={getActionButtonStyle(`reconsult-${a.appointmentId}`)} onClick={() => { setSelectedAppointmentForReconsult(a); setReconsultModal(true); setClickedButtons(prev => ({ ...prev, [`reconsult-${a.appointmentId}`]: true })); }}>Schedule Reconsult</button>
                     )}
+=======
+                    <button style={{ ...buttonStyle, background: '#17a2b8', color: 'white' }} onClick={() => { console.log('View Details clicked'); setSelectedAppointment(a); }}>View Details</button>
+                    <button style={{ ...buttonStyle, background: '#ffc107', color: 'white' }} onClick={() => { console.log('Reschedule clicked'); setSelectedAppointment(a); setRescheduleModal(true); }}>Reschedule</button>
+                    <button style={{ ...buttonStyle, background: '#dc3545', color: 'white' }} onClick={() => cancelAppointment(a.appointmentId)}>Cancel</button>
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
                   </td>
                 </tr>
               ))}
@@ -433,6 +495,7 @@ const PatientDashboard = () => {
             <button onClick={fetchData} style={{ ...buttonStyle, background: '#28a745', color: 'white', marginLeft: '1rem' }}>Refresh</button>
           </div>
           <table style={tableStyle}>
+<<<<<<< HEAD
             <thead>
               <tr>
                 <th style={thStyle}>Prescription ID</th>
@@ -471,6 +534,53 @@ const PatientDashboard = () => {
               })()}
             </tbody>
           </table>
+=======
+  <thead>
+    <tr>
+      <th style={thStyle}>Prescription ID</th>
+      <th style={thStyle}>Doctor Name</th>
+      <th style={thStyle}>Specialization</th>
+      <th style={thStyle}>Appointment Date</th>
+      <th style={thStyle}>Prescription Date</th>
+      <th style={thStyle}>Status</th>
+      <th style={thStyle}>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {(() => {
+      console.log('Filtered prescriptions data:', filteredPrescriptions);  // Added: Debug to see what data is received
+      return filteredPrescriptions.length > 0 ? filteredPrescriptions.map((p, index) => (
+        <tr key={p.prescriptionId} style={index % 2 === 0 ? {} : { backgroundColor: '#f9f9f9' }}>
+          <td style={tdStyle}>{p.prescriptionId}</td>
+          {/* Updated: Try nested doctor.fullName first, fallback to doctorName, then 'Not Assigned' */}
+          <td style={tdStyle}>{p.doctor?.fullName || p.doctorName || 'Not Assigned'}</td>
+          {/* Updated: Try nested doctor.specialization first, fallback to specialization, then 'N/A' */}
+          <td style={tdStyle}>{p.doctor?.specialization || p.specialization || 'N/A'}</td>
+          {/* Updated: Use appointmentDate with fallback */}
+          <td style={tdStyle}>{p.appointmentDate || 'N/A'}</td>
+          <td style={tdStyle}>{p.issuedAt}</td>
+          <td style={tdStyle}>
+            <span style={{ color: (p.status || 'ACTIVE') === 'ACTIVE' ? 'green' : 'red', fontWeight: 'bold' }}>
+              {p.status || 'ACTIVE'}
+            </span>
+          </td>
+          <td style={tdStyle}>
+            <button style={{ ...buttonStyle, background: '#17a2b8', color: 'white' }} onClick={() => { console.log('View Prescription clicked'); setSelectedPrescription(p); }}>View</button>
+            <button style={{ ...buttonStyle, background: '#28a745', color: 'white' }} onClick={() => downloadPdf(p.prescriptionId)}>Download PDF</button>
+            <button style={{ ...buttonStyle, background: '#6c757d', color: 'white' }} onClick={() => printPrescription(p)}>Print</button>
+            <button style={{ ...buttonStyle, background: '#ffc107', color: 'white' }} onClick={() => requestRefill(p.prescriptionId)}>Request Refill</button>
+            <button style={{ ...buttonStyle, background: '#007bff', color: 'white' }} onClick={() => { console.log('Book Follow-up clicked'); setSelectedPrescription(p); setFollowUpModal(true); }}>Book Follow-up</button>
+          </td>
+        </tr>
+      )) : (
+        <tr>
+          <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No prescriptions found. Try refreshing or check if prescriptions have been added.</td>
+        </tr>
+      );
+    })()}
+  </tbody>
+</table>
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
           {selectedPrescription && (
             <div style={{ marginTop: '2rem', padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
               <h4>Prescription Details</h4>
@@ -486,6 +596,7 @@ const PatientDashboard = () => {
             </div>
           )}
         </div>
+<<<<<<< HEAD
         {reconsultModal && (
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'white', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', zIndex: 1000 }}>
             <h3>Schedule Reconsult</h3>
@@ -496,6 +607,8 @@ const PatientDashboard = () => {
             <button onClick={() => setReconsultModal(false)} style={{ ...buttonStyle, background: '#ccc', color: 'black' }}>Cancel</button>
           </div>
         )}
+=======
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
         {rescheduleModal && (
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'white', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', zIndex: 1000 }}>
             <h3>Reschedule Appointment</h3>
@@ -521,9 +634,12 @@ const PatientDashboard = () => {
 };
 
 export default PatientDashboard;
+<<<<<<< HEAD
 
                             
                             
                             
                             
                             
+=======
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c

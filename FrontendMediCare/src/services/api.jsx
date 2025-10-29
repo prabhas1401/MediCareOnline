@@ -26,9 +26,12 @@ export const authAPI = {
   login: (data) => api.post('/auth/login', data),
   registerPatient: (data) => api.post('/auth/register/patient', data),
   registerDoctor: (data) => api.post('/auth/register/doctor', data),
+<<<<<<< HEAD
   login: (data) => axios.post(`${API_BASE_URL}/auth/login`, data),
   forgotPassword: (email) => axios.post(`${API_BASE_URL}/auth/forgot-password`, { email }),
   resetPassword: (token, newPassword) => axios.post(`${API_BASE_URL}/auth/reset-password`, { token, newPassword }),
+=======
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 };
 
 // Patient API
@@ -44,7 +47,11 @@ export const appointmentAPI = {
   create: (data) => api.post('/appointments/request', data),
   confirmAfterPayment: (data) => api.post('/appointments/confirm-after-payment', data),
   cancel: (id) => api.put(`/appointments/${id}/cancel`),
+<<<<<<< HEAD
   reschedule: (id, data) => api.put(`/appointments/${id}/reschedule`, data),  // Correct: PUT
+=======
+  reschedule: (id, data) => api.put(`/appointments/${id}/reschedule`, data),
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
   getById: (id) => api.get(`/appointments/${id}`),
   getPending: (specialization) => api.get(`/appointments/pending/${specialization}`),
   getByDoctor: () => api.get('/appointments/doctor'),
@@ -54,7 +61,11 @@ export const appointmentAPI = {
   schedule: (id, data) => api.post(`/appointments/${id}/schedule`, data),
   getCalendar: (doctorId, date) => api.get(`/appointments/doctor/${doctorId}/calendar/date/${date}`),
   blockSlot: (data) => api.post('/appointments/doctor/availability/block', data),
+<<<<<<< HEAD
   createReconsult: (originalId) => api.post(`/appointments/${originalId}/reconsult`),  // Correct: Only one instance
+=======
+  createReconsult: (originalId) => api.post(`/appointments/${originalId}/reconsult`),
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
   getReconsults: () => api.get('/appointments/doctor/reconsults'),
   startVisit: (id) => api.put(`/appointments/${id}/start-visit`),
 };
@@ -80,8 +91,13 @@ export const doctorAPI = {
   updateProfile: (data) => api.put('/doctor/profile', data),
   getAppointments: () => api.get('/doctor/appointments'),
   getPendingAppointments: () => api.get('/doctor/pending-appointments'),
+<<<<<<< HEAD
   addPatient: (data) => api.post('/doctor/patients', data),
   rescheduleAppointment: (id, data) => api.post(`/doctor/appointments/${id}/reschedule`, data),  // Assuming backend uses POST for doctors; change to PUT if needed
+=======
+  addPatient: (data) => api.post('/doctor/patients', data),  // Fixed path
+  rescheduleAppointment: (id, data) => api.put(`/doctor/appointments/${id}/reschedule`, data),
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
   getLeaves: () => api.get('/doctor/leaves'),
   addLeave: (data) => api.post('/doctor/leaves', data),
   getAllDoctors: () => api.get('/doctor/all'),
@@ -91,9 +107,13 @@ export const doctorAPI = {
   updateDoctor: (adminId, doctorId, data) => api.put(`/admin/doctors/${doctorId}`, { ...data, adminUserId }),
   findBySpecialization: (spec, adminId) => api.get(`/admin/doctors/specialization/${spec}`, { params: { adminUserId } }),
   addPrescription: (id, data) => prescriptionAPI.add(id, data),
+<<<<<<< HEAD
   scheduleReconsult: (id, data) => api.post(`/doctor/reconsult/${id}/schedule`, data),
   rescheduleReconsult: (id, data) => api.post(`/doctor/reconsult/${id}/reschedule`, data),
   getReconsults: () => api.get('/appointments/doctor/reconsults'),
+=======
+  scheduleReconsult: (id, data) => api.post(`/doctor/reconsult/${id}/schedule`, data),  // Added
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 };
 
 // Admin API
@@ -113,6 +133,10 @@ export const adminAPI = {
   createPatient: (data) => api.post('/admin/patients', data),
   updatePatient: (id, data) => api.put(`/admin/patients/${id}`, data),
   deletePatient: (id) => api.delete(`/admin/patients/${id}`),
+<<<<<<< HEAD
+=======
+  getAppointments: () => api.get('/admin/appointments'),
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
   getPrescriptions: () => api.get('/admin/prescriptions'),
   getPayments: () => api.get('/admin/payments'),
   getAdmins: () => api.get('/admin/admins'),
@@ -122,9 +146,16 @@ export const adminAPI = {
   getCancelledAppointments: () => api.get('/admin/appointments/cancelled'),
   approveAppointment: (id, data) => api.put(`/admin/appointments/${id}/approve`, data),
   cancelAppointment: (id, data) => api.post(`/admin/appointments/${id}/cancel`, data),
+<<<<<<< HEAD
   // FIXED: Changed to PUT to match backend @PutMapping
   rescheduleAppointment: (id, data) => api.put(`/appointments/${id}/reschedule`, data),
   reassignAppointment: (id, data) => api.put(`/appointments/${id}/reassign`, data),
   archiveAppointment: (id) => api.put(`/appointments/${id}/archive`),
   getAllAppointments: () => api.get('/admin/appointments'),
 };
+=======
+  rescheduleAppointment: (data) => api.put('/admin/appointments/reschedule', data),  // Changed to PUT
+  reassignAppointment: (data) => api.put('/admin/appointments/reassign', data),  // Changed to PUT
+  archiveAppointment: (id) => api.put(`/admin/appointments/${id}/archive`),  // Changed to PUT
+};
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c

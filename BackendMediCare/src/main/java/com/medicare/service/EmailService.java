@@ -62,7 +62,11 @@ public class EmailService {
     // Password reset email
     public void sendPasswordResetEmail(String to, String token) {
         String subject = "Reset your MediCare HMS password";
+<<<<<<< HEAD
         String link = "http://localhost:3000/reset-password?token=" + token;
+=======
+        String link = "http://localhost:5173/reset-password?token=" + token;
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
         String html = "<p>Reset your password: <a href=\"" + link + "\">Reset</a></p>";
         sendHtmlEmail(to, subject, html);
     }

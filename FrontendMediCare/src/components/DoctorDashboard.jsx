@@ -13,11 +13,15 @@ const DoctorDashboard = () => {
   const [calendar, setCalendar] = useState([]);
   const [prescription, setPrescription] = useState({ diagnosis: '', advice: '', medicines: [] });
   const [leave, setLeave] = useState({ date: '' });
+<<<<<<< HEAD
   // const [reconsults, setReconsults] = useState({ id: '', newRequestedDateTime: '' });
   const [reconsults, setReconsults] = useState([]);
   const [scheduleReconsultModal, setScheduleReconsultModal] = useState(false);
   const [selectedReconsult, setSelectedReconsult] = useState(null);
   const [reconsultDateTime, setReconsultDateTime] = useState('');
+=======
+  const [reconsult, setReconsult] = useState({ id: '', newRequestedDateTime: '' });
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
   const [newPatient, setNewPatient] = useState({ fullName: '', emailId: '', phoneNumber: '', rawPassword: '', gender: '', dateOfBirth: '' });
   const [rescheduleModal, setRescheduleModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -28,7 +32,10 @@ const DoctorDashboard = () => {
   // New state for prescription section
   const [selectedAppointmentForPrescription, setSelectedAppointmentForPrescription] = useState(null);
   const [newMedicine, setNewMedicine] = useState({ name: '', dosage: '', frequency: '', duration: '', notes: '' });
+<<<<<<< HEAD
   const [clickedButtons, setClickedButtons] = useState({});  // Added: State to track clicked buttons
+=======
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 
   useEffect(() => {
     fetchData();
@@ -37,16 +44,28 @@ const DoctorDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+<<<<<<< HEAD
       const [a, pend, prof, rec] = await Promise.all([
         doctorAPI.getAppointments(),
         doctorAPI.getPendingAppointments(),
         doctorAPI.getProfile(),
         doctorAPI.getReconsults()  // New: Fetch reconsults
+=======
+      const [a, pend, prof] = await Promise.all([
+        doctorAPI.getAppointments(),
+        doctorAPI.getPendingAppointments(),
+        doctorAPI.getProfile()
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
       ]);
       setAppointments(a.data);
       setPendingAppointments(pend.data);
       setProfile(prof.data);
+<<<<<<< HEAD
       setReconsults(rec.data);  // New: Set reconsults
+=======
+      // Fetch patients if endpoint exists, else mock or add backend
+      // setPatients(pat.data);
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
     } catch (err) {
       console.error('Fetch error:', err);
       alert('Error fetching data: ' + (err.response?.data?.message || err.message));
@@ -55,6 +74,7 @@ const DoctorDashboard = () => {
     }
   };
 
+<<<<<<< HEAD
   const scheduleReconsult = async () => {
     try {
       await doctorAPI.scheduleReconsult(selectedReconsult.appointmentId, { newRequestedDateTime: reconsultDateTime });
@@ -76,6 +96,8 @@ const DoctorDashboard = () => {
     }
   };
 
+=======
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
   const updateProfile = async () => {
     console.log('Update Profile button clicked');
     try {
@@ -87,7 +109,10 @@ const DoctorDashboard = () => {
       alert('Error updating profile: ' + (err.response?.data?.message || err.message));
     }
   };
+<<<<<<< HEAD
   
+=======
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 
   const addPrescription = async (id) => {
     console.log('Add Prescription button clicked for appointment ID:', id);
@@ -139,6 +164,20 @@ const DoctorDashboard = () => {
     }
   };
 
+<<<<<<< HEAD
+=======
+  const scheduleReconsult = async () => {
+    try {
+      await doctorAPI.scheduleReconsult(reconsult.id, reconsult);  // Now defined in api.jsx
+      setReconsult({ id: '', newRequestedDateTime: '' });
+      fetchData();
+      alert('Reconsult scheduled successfully');
+    } catch (err) {
+      alert('Error scheduling reconsult: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
   const addPatient = async () => {
     try {
       await doctorAPI.addPatient(newPatient);  // Now uses /doctor/patients
@@ -150,6 +189,7 @@ const DoctorDashboard = () => {
     }
   };
 
+<<<<<<< HEAD
 // const rescheduleAppointment = async () => {
 //   try {
 //     await doctorAPI.rescheduleAppointment(selectedAppointment.appointmentId, { newRequestedDateTime: newDateTime });
@@ -167,6 +207,9 @@ const DoctorDashboard = () => {
 //   }
 // };
 const rescheduleAppointment = async () => {
+=======
+  const rescheduleAppointment = async () => {
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
     console.log('Reschedule Confirm button clicked');
     try {
       // Use calendar API to confirm availability, then update
@@ -293,6 +336,7 @@ const rescheduleAppointment = async () => {
   const tdStyle = { border: '1px solid #ddd', padding: '12px' };
   const buttonStyle = { padding: '6px 12px', margin: '2px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' };
 
+<<<<<<< HEAD
   const getSidebarButtonStyle = (isActive) => ({
     background: 'none',
     border: 'none',
@@ -311,10 +355,17 @@ const rescheduleAppointment = async () => {
     <div style={{ display: 'flex', fontFamily: 'Poppins, sans-serif', background: '#f4f8fb', minHeight: '100vh' }}>
       <div style={{ width: sidebarCollapsed ? '0' : '250px', background: 'white', color: 'black', padding: '1rem', transition: 'width 0.3s', overflow: 'hidden' }}>
         <button onClick={() => { console.log('Sidebar toggle clicked'); setSidebarCollapsed(!sidebarCollapsed); }} style={{ background: 'none', border: 'none', color: 'black', fontSize: '1.5rem', cursor: 'pointer' }}>
+=======
+  return (
+    <div style={{ display: 'flex', fontFamily: 'Poppins, sans-serif', background: '#f4f8fb', minHeight: '100vh' }}>
+      <div style={{ width: sidebarCollapsed ? '0' : '250px', background: '#007bff', color: 'white', padding: '1rem', transition: 'width 0.3s', overflow: 'hidden' }}>
+        <button onClick={() => { console.log('Sidebar toggle clicked'); setSidebarCollapsed(!sidebarCollapsed); }} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
           ☰
         </button>
         <h2>Doctor Menu</h2>
         <ul style={{ listStyle: 'none', padding: 0 }}>
+<<<<<<< HEAD
         <li><button onClick={() => setActiveSection('profile')} style={getSidebarButtonStyle(activeSection === 'profile')}>Update Profile</button></li>
         <li><button onClick={() => setActiveSection('appointments')} style={getSidebarButtonStyle(activeSection === 'appointments')}>Appointments</button></li>
         <li><button onClick={() => setActiveSection('pendingAppointments')} style={getSidebarButtonStyle(activeSection === 'pendingAppointments')}>Pending Appointments</button></li>
@@ -324,6 +375,16 @@ const rescheduleAppointment = async () => {
         {/* Removed: Schedule Reconsult */}
         <li><button onClick={() => setActiveSection('reconsults')} style={getSidebarButtonStyle(activeSection === 'reconsults')}>Reconsults</button></li>  {/* New: Reconsults */}
       </ul>
+=======
+          <li><button onClick={() => { console.log('Profile section clicked'); setActiveSection('profile'); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Update Profile</button></li>
+          <li><button onClick={() => { console.log('Appointments section clicked'); setActiveSection('appointments'); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Appointments</button></li>
+          <li><button onClick={() => { console.log('Pending Appointments section clicked'); setActiveSection('pendingAppointments'); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Pending Appointments</button></li>
+          <li><button onClick={() => { console.log('Write Prescription section clicked'); setActiveSection('writePrescription'); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Write Prescription</button></li>
+          <li><button onClick={() => { console.log('Add Leave section clicked'); setActiveSection('addLeave'); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Add Leave</button></li>
+          <li><button onClick={() => { console.log('Add Patients section clicked'); setActiveSection('addPatients'); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Add Patients</button></li>
+          <li><button onClick={() => { console.log('Schedule Reconsult section clicked'); setActiveSection('scheduleReconsult'); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Schedule Reconsult</button></li>
+        </ul>
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
       </div>
       <div style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
         {loading && <p>Loading...</p>}
@@ -383,10 +444,16 @@ const rescheduleAppointment = async () => {
                     <td style={tdStyle}>{a.scheduledDateTime}</td>
                     <td style={tdStyle}><span style={{ color: a.status === 'CONFIRMED' ? 'green' : 'grey' }}>{a.status}</span></td>
                     <td style={tdStyle}>
+<<<<<<< HEAD
                       {/* <button onClick={() => startVisit(a.appointmentId)} style={{ ...buttonStyle, background: '#28a745', color: 'white' }}>Start Visit</button> */}
                       <button style={getActionButtonStyle(`start-${a.appointmentId}`, '#28a745')} onClick={() => { startVisit(a.appointmentId); setClickedButtons(prev => ({ ...prev, [`start-${a.appointmentId}`]: true })); }}><a href={a.meetingLink} style={{color:'white', textDecoration:'none'}}>Start Visit</a></button>
                       <button style={getActionButtonStyle(`cancel-${a.appointmentId}`, '#dc3545')} onClick={() => { cancelAppointment(a.appointmentId); setClickedButtons(prev => ({ ...prev, [`cancel-${a.appointmentId}`]: true })); }}>Cancel</button>
                       <button style={getActionButtonStyle(`reschedule-${a.appointmentId}`, '#ffc107')} onClick={() => { setSelectedAppointment(a); setRescheduleModal(true); setClickedButtons(prev => ({ ...prev, [`reschedule-${a.appointmentId}`]: true })); }}>Reschedule</button>
+=======
+                      <button onClick={() => startVisit(a.appointmentId)} style={{ ...buttonStyle, background: '#28a745', color: 'white' }}>Start Visit</button>
+                      <button onClick={() => cancelAppointment(a.appointmentId)} style={{ ...buttonStyle, background: '#dc3545', color: 'white' }}>Cancel</button>
+                      <button onClick={() => { setSelectedAppointment(a); setRescheduleModal(true); }} style={{ ...buttonStyle, background: '#ffc107', color: 'white' }}>Reschedule</button>
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
                     </td>
                   </tr>
                 ))}
@@ -427,10 +494,17 @@ const rescheduleAppointment = async () => {
                       <td style={tdStyle}><span style={{ color: 'orange' }}>{pa.status}</span></td>
                       {/* <td style={tdStyle}>{pa.createdAt ? Math.floor((new Date() - new Date(pa.createdAt)) / (1000 * 60 * 60)) + 'h ago' : 'N/A'}</td> */}
                       <td style={tdStyle}>
+<<<<<<< HEAD
                         <button style={getActionButtonStyle(`confirm-${pa.appointmentId}`, '#28a745')} onClick={() => { confirmAppointment(pa.appointmentId); setClickedButtons(prev => ({ ...prev, [`confirm-${pa.appointmentId}`]: true })); }}>Confirm</button>
                         <button style={getActionButtonStyle(`reject-${pa.appointmentId}`, '#dc3545')} onClick={() => { rejectAppointment(pa.appointmentId); setClickedButtons(prev => ({ ...prev, [`reject-${pa.appointmentId}`]: true })); }}>Reject</button>
                         <button style={getActionButtonStyle(`reschedule-pending-${pa.appointmentId}`, '#ffc107')} onClick={() => { setSelectedAppointment(pa); setRescheduleModal(true); setClickedButtons(prev => ({ ...prev, [`reschedule-pending-${pa.appointmentId}`]: true })); }}>Reschedule</button>
                         <button style={getActionButtonStyle(`view-pending-${pa.appointmentId}`, '#17a2b8')} onClick={() => { console.log('View Details clicked for pending appointment'); alert('View Details (placeholder)'); setClickedButtons(prev => ({ ...prev, [`view-pending-${pa.appointmentId}`]: true })); }}>View Details</button>
+=======
+                        <button onClick={() => confirmAppointment(pa.appointmentId)} style={{ ...buttonStyle, background: '#28a745', color: 'white' }}>Confirm</button>
+                        <button onClick={() => rejectAppointment(pa.appointmentId)} style={{ ...buttonStyle, background: '#dc3545', color: 'white' }}>Reject</button>
+                        <button onClick={() => { setSelectedAppointment(pa); setRescheduleModal(true); }} style={{ ...buttonStyle, background: '#ffc107', color: 'white' }}>Reschedule</button>
+                        <button onClick={() => { console.log('View Details clicked for pending appointment'); alert('View Details (placeholder)'); }} style={{ ...buttonStyle, background: '#17a2b8', color: 'white' }}>View Details</button>
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
                       </td>
                     </tr>
                   ))
@@ -530,6 +604,7 @@ const rescheduleAppointment = async () => {
               <tbody>
                 {filteredPatients.map((p, index) => (
                   <tr key={p.userId} style={index % 2 === 0 ? {} : { backgroundColor: '#f9f9f9' }}>
+<<<<<<< HEAD
                   <td style={tdStyle}>{p.fullName}</td>
                   <td style={tdStyle}>{p.userId}</td>
                   <td style={tdStyle}>{p.specialization}</td>
@@ -652,3 +727,63 @@ export default DoctorDashboard;
 
 
 
+=======
+                    <td style={tdStyle}>{p.fullName}</td>
+                    <td style={tdStyle}>{p.userId}</td>
+                    <td style={tdStyle}>{p.specialization}</td>
+                    <td style={tdStyle}>
+                      <button onClick={() => editPatient(p)} style={{ ...buttonStyle, background: '#ffc107', color: 'white' }}>Edit</button>
+                      <button onClick={() => deletePatient(p.userId)} style={{ ...buttonStyle, background: '#dc3545', color: 'white' }}>Delete</button>
+                      <button onClick={() => blockPatient(p.userId)} style={{ ...buttonStyle, background: '#6c757d', color: 'white' }}>Block</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ width: '200px', marginLeft: '2rem', marginTop: '-1rem' }}>
+            <h4>Filters</h4>
+            <select value={filters.patients} onChange={(e) => setFilters({ ...filters, patients: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
+              <option value="all">All</option>
+              <option value="CARDIOLOGIST">Cardiologist</option>
+              <option value="ORTHOPEDIC">Orthopedic</option>
+              <option value="DENTIST">Dentist</option>
+              <option value="GYNAECOLOGIST">Gynaecologist</option>
+              <option value="NEUROLOGIST">Neurologist</option>
+              <option value="GASTROENTEROLOGIST">Gastroenterologist</option>
+              <option value="PEDIATRICS">Pediatrics</option>
+              <option value="RADIOLOGY">Radiology</option>
+              <option value="GENERAL_PHYSICIAN">General Physician</option>
+              <option value="OTOLARYNGOLOGIST_ENT">Otolaryngologist ENT</option>
+              <option value="ENDOCRINOLOGIST">Endocrinologist</option>
+              <option value="ONCOLOGY">Oncology</option>
+            </select>
+          </div>
+        </div>
+        <div style={{ display: activeSection === 'scheduleReconsult' ? 'flex' : 'none', background: 'white', padding: '2rem', borderRadius: '10px', boxShadow: '0 2px 6px rgba(0,0,0,0.1)', flex: 1 }}>
+          <div style={{ flex: 1 }}>
+            <h3>Schedule Reconsult</h3>
+            <form onSubmit={(e) => { e.preventDefault(); scheduleReconsult(); }}>
+              <input type="number" placeholder="Reconsult ID" value={reconsult.id} onChange={(e) => setReconsult({ ...reconsult, id: e.target.value })} required style={{ width: '100%', padding: '10px', margin: '10px 0', border: '1px solid #ccc', borderRadius: '4px' }} />
+              <input type="datetime-local" value={reconsult.newRequestedDateTime} onChange={(e) => setReconsult({ ...reconsult, newRequestedDateTime: e.target.value })} required style={{ width: '100%', padding: '10px', margin: '10px 0', border: '1px solid #ccc', borderRadius: '4px' }} />
+              <button type="submit" style={{ ...buttonStyle, background: '#007bff', color: 'white' }}>Schedule Reconsult</button>
+            </form>
+          </div>
+        </div>
+        {rescheduleModal && (
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'white', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', zIndex: 1000 }}>
+            <h3>Reschedule Appointment</h3>
+            <p>Patient: {selectedAppointment?.patient.fullName}</p>
+            <p>Current Date/Time: {selectedAppointment?.scheduledDateTime}</p>
+            <input type="datetime-local" value={newDateTime} onChange={(e) => setNewDateTime(e.target.value)} style={{ width: '100%', padding: '10px', margin: '10px 0', border: '1px solid #ccc', borderRadius: '4px' }} />
+            <button onClick={rescheduleAppointment} style={{ ...buttonStyle, background: '#007bff', color: 'white' }}>Confirm</button>
+            <button onClick={() => { console.log('Reschedule Cancel clicked'); setRescheduleModal(false); }} style={{ ...buttonStyle, background: '#ccc', color: 'black' }}>Cancel</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default DoctorDashboard;
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c

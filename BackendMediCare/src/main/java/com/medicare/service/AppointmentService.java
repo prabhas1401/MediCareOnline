@@ -485,6 +485,7 @@ public class AppointmentService {
             }
         }
 
+<<<<<<< HEAD
 //        @Transactional
 //        public void rescheduleAppointmentForPatient(Long appointmentId, Long patientUserId, LocalDateTime newDateTime) {
 //            Appointment appt = appointmentRepository.findById(appointmentId)
@@ -543,6 +544,66 @@ public class AppointmentService {
 //            emailService.sendAppointmentRescheduledEmail(appt.getDoctor().getUser().getEmailId(),
 //                    appt.getDoctor().getUser().getFullName(), old, appt.getScheduledDateTime(), appt.getMeetingLink());
 //        }
+=======
+        @Transactional
+        public void rescheduleAppointmentForPatient(Long appointmentId, Long patientUserId, LocalDateTime newDateTime) {
+            Appointment appt = appointmentRepository.findById(appointmentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+
+            if (!appt.getPatient().getUser().getUserId().equals(patientUserId)) {
+                throw new ForbiddenException("You are not authorized to reschedule this appointment.");
+            }
+
+            if (appt.getStatus() != Appointment.AppointmentStatus.CONFIRMED) {
+                throw new ConflictException("Only confirmed appointments can be rescheduled.");
+            }
+
+            if (appt.getScheduledDateTime().isBefore(LocalDateTime.now().plusDays(1))) {
+                throw new ConflictException("Cannot reschedule less than 1 day before appointment.");
+            }
+
+            if (!newDateTime.isAfter(LocalDateTime.now())) {
+                throw new ConflictException("Requested slot must be in the future.");
+            }
+
+            validateSlotTime(newDateTime);
+
+            Long doctorUserId = appt.getDoctor().getUser().getUserId();
+
+            if (doctorLeaveRepository.existsByDoctorUserUserIdAndLeaveDate(doctorUserId, newDateTime.toLocalDate())) {
+                throw new ConflictException("Doctor is on leave that date.");
+            }
+
+            if (appointmentRepository.existsByDoctorUserUserIdAndScheduledDateTime(doctorUserId, newDateTime)) {
+                throw new ConflictException("Requested slot already booked.");
+            }
+
+            boolean blocked = availabilityRepository.existsByDoctorUserUserIdAndDateAndStartTimeAndBlockedTrue(
+                    doctorUserId, newDateTime.toLocalDate(), newDateTime.toLocalTime());
+            if (blocked) throw new ConflictException("Requested slot is blocked/unavailable.");
+
+            LocalDateTime old = appt.getScheduledDateTime();
+            appt.setScheduledDateTime(newDateTime);
+
+            try {
+                String meetLink = zoomService.createZoomMeeting(
+                    "Consultation with Dr. " + appt.getDoctor().getUser().getFullName(),
+                    newDateTime,
+                    20
+                );
+                appt.setMeetingLink(meetLink);
+            } catch (Exception e) {
+                throw new ConflictException("Could not generate Zoom link while rescheduling: " + e.getMessage());
+            }
+
+            appointmentRepository.save(appt);
+
+            emailService.sendAppointmentRescheduledEmail(appt.getPatient().getUser().getEmailId(),
+                    appt.getPatient().getUser().getFullName(), old, appt.getScheduledDateTime(), appt.getMeetingLink());
+            emailService.sendAppointmentRescheduledEmail(appt.getDoctor().getUser().getEmailId(),
+                    appt.getDoctor().getUser().getFullName(), old, appt.getScheduledDateTime(), appt.getMeetingLink());
+        }
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 
         @Transactional
         public Appointment createReconsult(Long originalAppointmentId, Long patientUserId) {
@@ -751,6 +812,7 @@ public class AppointmentService {
         }
 
         // New method for admin reschedule (handles LocalDateTime directly)
+<<<<<<< HEAD
         // ... existing method ...
         @Transactional
         public Appointment rescheduleAppointment(Long appointmentId, LocalDateTime newRequestedDateTime, String reason, Long actingAdminUserId) {
@@ -770,6 +832,14 @@ public class AppointmentService {
             appt.setStatus(Appointment.AppointmentStatus.ARCHIVED);  // Assuming ARCHIVED is added to enum
             appointmentRepository.save(appt);
             log.info("Appointment {} archived by user {}", appointmentId, actingUserId);
+=======
+        @Transactional
+        public void rescheduleAppointment(Long appointmentId, LocalDateTime newRequestedDateTime, String reason, Long actingAdminUserId) {
+            // Call existing reschedule method with byAdmin=true
+            rescheduleAppointment(appointmentId, actingAdminUserId, newRequestedDateTime, true);
+            // Optionally log or store reason if needed (not implemented in existing logic)
+            log.info("Appointment {} rescheduled by admin {} with reason: {}", appointmentId, actingAdminUserId, reason);
+>>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
         }
 
         // New method for admin reassign (handles LocalDateTime directly)
