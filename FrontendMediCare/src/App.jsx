@@ -1,0 +1,33 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './components/Home';
+import Register from './components/Register';
+import Login from './components/Login';
+import Welcome from './components/Welcome';
+import AdminDashboard from './components/AdminDashboard';
+import DoctorDashboard from './components/DoctorDashboard';
+import PatientDashboard from './components/PatientDashBoard';  // Corrected import (rename file to PatientDashboard.jsx if needed)
+import ProtectedRoute from './components/ProtectedRoute';
+import Navbar from './components/NavBar';
+import ResetPassword from './components/ResetPassword';  // New import
+
+function App() {
+  return (
+    <Router>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />  {/* New route */}
+        <Route path="/welcome" element={<Welcome />} />
+        <Route path="/admin" element={<ProtectedRoute role="ADMIN"><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/doctor" element={<ProtectedRoute role="DOCTOR"><DoctorDashboard /></ProtectedRoute>} />
+        <Route path="/patient" element={<ProtectedRoute role="PATIENT"><PatientDashboard /></ProtectedRoute>} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
+
