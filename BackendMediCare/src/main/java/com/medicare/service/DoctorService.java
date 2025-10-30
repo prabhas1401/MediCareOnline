@@ -263,10 +263,9 @@ public class DoctorService {
         Appointment appointment = appointmentRepository.findById(id).orElseThrow(() -> new RuntimeException("Appointment not found"));
         appointment.setScheduledDateTime(LocalDateTime.parse(newDateTime));
         appointmentRepository.save(appointment);
-<<<<<<< HEAD
+
 //        appointment.setIsRescheduled(true);
-=======
->>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
+
     }
 
     public List<Appointment> getAppointments(Long userId) {

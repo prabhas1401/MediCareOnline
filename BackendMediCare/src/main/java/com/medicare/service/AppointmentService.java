@@ -485,7 +485,6 @@ public class AppointmentService {
             }
         }
 
-<<<<<<< HEAD
 //        @Transactional
 //        public void rescheduleAppointmentForPatient(Long appointmentId, Long patientUserId, LocalDateTime newDateTime) {
 //            Appointment appt = appointmentRepository.findById(appointmentId)
@@ -544,7 +543,7 @@ public class AppointmentService {
 //            emailService.sendAppointmentRescheduledEmail(appt.getDoctor().getUser().getEmailId(),
 //                    appt.getDoctor().getUser().getFullName(), old, appt.getScheduledDateTime(), appt.getMeetingLink());
 //        }
-=======
+
         @Transactional
         public void rescheduleAppointmentForPatient(Long appointmentId, Long patientUserId, LocalDateTime newDateTime) {
             Appointment appt = appointmentRepository.findById(appointmentId)
@@ -603,7 +602,6 @@ public class AppointmentService {
             emailService.sendAppointmentRescheduledEmail(appt.getDoctor().getUser().getEmailId(),
                     appt.getDoctor().getUser().getFullName(), old, appt.getScheduledDateTime(), appt.getMeetingLink());
         }
->>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 
         @Transactional
         public Appointment createReconsult(Long originalAppointmentId, Long patientUserId) {
@@ -715,9 +713,9 @@ public class AppointmentService {
                 throw new ConflictException("Only confirmed reconsult appointments can be rescheduled");
             }
 
-            if (appt.getScheduledDateTime() != null && appt.getScheduledDateTime().isBefore(LocalDateTime.now().plusDays(1))) {
-                throw new ConflictException("Cannot reschedule less than 1 day before reconsult appointment");
-            }
+//            if (appt.getScheduledDateTime() != null && appt.getScheduledDateTime().isBefore(LocalDateTime.now().plusDays(1))) {
+//                throw new ConflictException("Cannot reschedule less than 1 day before reconsult appointment");
+//            }
 
             if (!newRequestedDateTime.isAfter(LocalDateTime.now())) {
                 throw new ConflictException("Requested slot must be in the future");
@@ -812,15 +810,15 @@ public class AppointmentService {
         }
 
         // New method for admin reschedule (handles LocalDateTime directly)
-<<<<<<< HEAD
+
         // ... existing method ...
-        @Transactional
-        public Appointment rescheduleAppointment(Long appointmentId, LocalDateTime newRequestedDateTime, String reason, Long actingAdminUserId) {
-            // ... existing logic (unchanged) ...
-            // NEW: Return the updated appointment at the end
-            return appointmentRepository.findById(appointmentId).orElseThrow();  // Or return the 'appt' variable if it's the saved entity
-        }
-        
+//        @Transactional
+//        public Appointment rescheduleAppointment(Long appointmentId, LocalDateTime newRequestedDateTime, String reason, Long actingAdminUserId) {
+//            // ... existing logic (unchanged) ...
+//            // NEW: Return the updated appointment at the end
+//            return appointmentRepository.findById(appointmentId).orElseThrow();  // Or return the 'appt' variable if it's the saved entity
+//        }
+//        
         @Transactional
         public void archiveAppointment(Long appointmentId, Long actingUserId) {
             Appointment appt = appointmentRepository.findById(appointmentId)
@@ -832,14 +830,15 @@ public class AppointmentService {
             appt.setStatus(Appointment.AppointmentStatus.ARCHIVED);  // Assuming ARCHIVED is added to enum
             appointmentRepository.save(appt);
             log.info("Appointment {} archived by user {}", appointmentId, actingUserId);
-=======
+            
+        }
+
         @Transactional
         public void rescheduleAppointment(Long appointmentId, LocalDateTime newRequestedDateTime, String reason, Long actingAdminUserId) {
             // Call existing reschedule method with byAdmin=true
             rescheduleAppointment(appointmentId, actingAdminUserId, newRequestedDateTime, true);
             // Optionally log or store reason if needed (not implemented in existing logic)
             log.info("Appointment {} rescheduled by admin {} with reason: {}", appointmentId, actingAdminUserId, reason);
->>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
         }
 
         // New method for admin reassign (handles LocalDateTime directly)

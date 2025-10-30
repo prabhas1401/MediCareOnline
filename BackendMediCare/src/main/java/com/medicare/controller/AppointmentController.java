@@ -21,24 +21,23 @@ import com.medicare.dto.BlockSlotRequest;
 import com.medicare.dto.CancelRequest;
 import com.medicare.dto.CreateAppointmentRequest;
 import com.medicare.dto.PaymentSuccessRequest;
-<<<<<<< HEAD
+
 import com.medicare.dto.ReassignRequest;
-=======
->>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
+
 import com.medicare.dto.RescheduleRequest;
 import com.medicare.dto.ScheduleRequest;
 import com.medicare.dto.SlotDto;
 import com.medicare.entity.Appointment;
 import com.medicare.entity.Availability;
 import com.medicare.entity.Payment;
-<<<<<<< HEAD
+
 import com.medicare.exception.ConflictException;
 import com.medicare.exception.ResourceNotFoundException;
 import com.medicare.mapper.AppointmentMapper;
 import com.medicare.repository.AppointmentRepository;
-=======
+
 import com.medicare.mapper.AppointmentMapper;
->>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
+
 import com.medicare.service.AppointmentService;
 import com.medicare.service.AvailabilityService;
 import com.medicare.service.CalendarService;
@@ -69,11 +68,10 @@ public class AppointmentController {
     private final AvailabilityService availabilityService;
     private final CalendarService calendarService;
     private final JwtUtil jwtUtil;
-<<<<<<< HEAD
+
     private final AppointmentRepository appointmentRepository;
 
-=======
->>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
+
 
     @PostMapping("/confirm-after-payment")
     public ResponseEntity<ApiResponse<AppointmentDTO>> confirmAfterPayment(
@@ -250,9 +248,7 @@ public class AppointmentController {
         }
     }
 
-<<<<<<< HEAD
 
-=======
     @PutMapping("/{id}/reschedule")
     @PreAuthorize("hasRole('PATIENT')")
     public ResponseEntity<?> rescheduleAppointmentForPatient(@PathVariable Long id, @RequestBody RescheduleRequest req, Authentication auth) {
@@ -265,7 +261,7 @@ public class AppointmentController {
             return ResponseEntity.status(500).body("Error rescheduling appointment");
         }
     }
->>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
+
 
     @PostMapping("/{originalId}/reconsult")
     public ResponseEntity<ApiResponse<AppointmentDTO>> createReconsult(@PathVariable("originalId") Long originalAppointmentId,
@@ -321,28 +317,28 @@ public class AppointmentController {
             return ResponseEntity.status(404).body(null);
         }
     }
-<<<<<<< HEAD
+
     // ... no changes to imports or fields ...
 
-    @PutMapping("/{id}/reschedule")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<AppointmentDTO>> rescheduleAppointment(
-            @PathVariable Long id,
-            @Valid @RequestBody RescheduleRequest req,
-            Authentication authentication) {
-        try {
-            Long actingUserId = (Long) authentication.getPrincipal();
-            // NEW: Get the appointment from the service method's return value
-            Appointment appt = appointmentService.rescheduleAppointment(id, req.getNewRequestedDateTime(), req.getReason(), actingUserId);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Appointment rescheduled successfully.", AppointmentMapper.toDTO(appt)));
-        } catch (ConflictException e) {
-            log.error("Conflict rescheduling appointment ID {}: {}", id, e.getMessage());
-            return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
-        } catch (Exception e) {
-            log.error("Error rescheduling appointment ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(500).body(new ApiResponse<>(false, "An unexpected error occurred. Please contact support.", null));
-        }
-    }
+//    @PutMapping("/{id}/reschedule")
+//    @PreAuthorize("hasRole('ADMIN')")
+//    public ResponseEntity<ApiResponse<AppointmentDTO>> rescheduleAppointment(
+//            @PathVariable Long id,
+//            @Valid @RequestBody RescheduleRequest req,
+//            Authentication authentication) {
+//        try {
+//            Long actingUserId = (Long) authentication.getPrincipal();
+//            // NEW: Get the appointment from the service method's return value
+//            Appointment appt = appointmentService.rescheduleAppointment(id, req.getNewRequestedDateTime(), req.getReason(), actingUserId);
+//            return ResponseEntity.ok(new ApiResponse<>(true, "Appointment rescheduled successfully.", AppointmentMapper.toDTO(appt)));
+//        } catch (ConflictException e) {
+//            log.error("Conflict rescheduling appointment ID {}: {}", id, e.getMessage());
+//            return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
+//        } catch (Exception e) {
+//            log.error("Error rescheduling appointment ID {}: {}", id, e.getMessage(), e);
+//            return ResponseEntity.status(500).body(new ApiResponse<>(false, "An unexpected error occurred. Please contact support.", null));
+//        }
+//    }
     
 
     
@@ -383,9 +379,7 @@ public class AppointmentController {
             return ResponseEntity.status(500).body(new ApiResponse<>(false, "An unexpected error occurred. Please contact support.", null));
         }
     }
-=======
 
->>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
     @GetMapping("/doctor/reconsults")
     public ResponseEntity<List<AppointmentDTO>> findReconsultsByDoctor(Authentication authentication) {
         try {

@@ -37,11 +37,7 @@ public class AppointmentMapper {
                 appt.getDoctor().getSpecialization() != null ? appt.getDoctor().getSpecialization().name() : null
             );
         }
-<<<<<<< HEAD
-     
 
-=======
->>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 
         return new AppointmentDTO(
             appt.getAppointmentId(),

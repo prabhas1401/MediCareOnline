@@ -21,10 +21,6 @@ public record AppointmentDTO(
 	    Long originalAppointmentId,
 	    PatientInfo patient,
 	    DoctorInfo doctor
-<<<<<<< HEAD
-//	    boolean isRescheduled  // FIXED: Added type
-=======
->>>>>>> 4fd22286824ab62afecbb8bfccc0dc5345ed407c
 	) {
 	    public record PatientInfo(
 	        Long userId,
