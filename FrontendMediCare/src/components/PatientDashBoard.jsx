@@ -656,7 +656,7 @@ const PatientDashboard = () => {
       const response = await paymentAPI.initiate(paymentPayload);
       const { orderId, amount, currency, patientId } = response.data;
       const options = {
-        key: 'rzp_test_RVcBsWaU6E63ug',
+        key: '',
         amount: amount,
         currency: currency,
         order_id: orderId,
